@@ -1,0 +1,19 @@
+{
+  "name": "deckgl-example-pure-js-basic",
+  "version": "0.0.0",
+  "private": true,
+  "license": "MIT",
+  "scripts": {
+    "start": "vite --open",
+    "start-local": "vite --config ../../../vite.config.local.mjs",
+    "build": "vite build"
+  },
+  "dependencies": {
+    "@deck.gl/core": "^8.8.0",
+    "@deck.gl/geo-layers": "^8.9.19",
+    "@deck.gl/layers": "^8.8.0"
+  },
+  "devDependencies": {
+    "vite": "^4.0.0"
+  }
+}
