@@ -35,9 +35,9 @@ new Deck({
         new TileLayer({
             id: 'tile-layer',
             data: 'http://127.0.0.1:8000/{z}/{x}/{y}',
-            minZoom: 0,
-            maxZoom: 8,
-            tileSize: 256,
+            minZoom: 2,
+            maxZoom: 6,
+            tileSize: 512,
             renderSubLayers: props => {
                 const {bbox: {west, south, east, north}} = props.tile;
                 const h3Indexes = props.data; // List of H3 indexes for the tile
@@ -51,7 +51,7 @@ new Deck({
                     extruded: false,
                     stroked: false,
                     getHexagon: d => d.h3index,
-                    getFillColor: d => [100, 0, (1 - d.value / 400) * 255, 220],
+                    getFillColor: d => [100, 0, (1 - d.value)  * 255, 255],
                     getLineColor: [0, 0, 255, 255],
                     lineWidthUnits: 'pixels',
                     lineWidth: 1,
@@ -59,5 +59,5 @@ new Deck({
             }
         }),
     ],
-    getTooltip: ({object}) => object && `x: ${object.tile.x}, y: ${object.tile.y}, z: ${object.tile.z}`
+    getTooltip: ({object}) => object && `x: ${object.tile.x}, y: ${object.tile.y}, z: ${object.tile.z}, value: ${object.value}`
 });

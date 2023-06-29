@@ -2,6 +2,7 @@ import os
 
 import geopandas as gpd
 import mercantile
+import numpy as np
 import psycopg
 from fastapi import FastAPI
 from fastapi.encoders import jsonable_encoder
@@ -33,9 +34,10 @@ app.add_middleware(
 )
 
 
-def make_query(
+def make_query_filter_first(
     h3res: int, column: str, table: str = "h3_grid_spam2010v2r0_global_prod"
 ) -> psycopg.sql.Composed:
+    """Filers at res 6 first and then does the aggregation"""
     return sql.SQL(
         """
         select h3_to_parent(h3index, {}) h3, avg({}) from {} 
@@ -50,6 +52,28 @@ def make_query(
     )
 
 
+def make_query_aggregate_first(
+    h3res: int, column: str, table: str = "h3_grid_deforestation_global"
+) -> psycopg.sql.Composed:
+    """Does the aggregation to desired h3res first then filters"""
+    return sql.SQL(
+        """
+        select parent, agg_value
+        from (
+            select h3_to_parent(h3index, {h3res}) parent, avg({column}) agg_value 
+            from {table} 
+            group by parent
+            ) as h3_grid
+        where parent = any({tile_indexes})
+        """
+    ).format(
+        h3res=sql.Literal(h3res),
+        column=sql.Identifier(column),
+        table=sql.Identifier(table),
+        tile_indexes=sql.Placeholder(),
+    )
+
+
 @app.get(
     "/{z}/{x}/{y}",
     responses={
@@ -58,16 +82,21 @@ def make_query(
     response_class=JSONResponse,
 )
 def tile(z: int, x: int, y: int):
+
+    # Tile logic
     tile = mercantile.Tile(x=x, y=y, z=z)
     tile_poly = box(*mercantile.bounds(tile))
-    h3res = min(z-1, 6)
-    gdf = vector.geodataframe_to_h3(gpd.GeoDataFrame(geometry=[tile_poly]), 6)
-    gdf["h3index"] = gdf["h3index"].apply(lambda x: hex(x)[2:])
-    # join gdf with db
+    h3res = min(z, 6)
+    _, h3indexes = next(vector.geometries_to_h3_generator([tile_poly], np.array([0], dtype=np.uint64), h3res))
+    h3indexes = [hex(index)[2:] for index in h3indexes]
+
+    # DB
     with psycopg.connect(get_connection_info(), autocommit=True) as conn:
         with conn.cursor() as cur:
             cur.execute(
-                make_query(h3res, "spam2010V2R0GlobalPTrofA"), [gdf["h3index"].to_list()]
+                make_query_aggregate_first(h3res, "hansenLoss2021"),
+                # make_query_aggregate_first(h3res, "hansenLossBuffered2021"),
+                [h3indexes],
             )
             h3index_to_value = [
                 {"h3index": h3index, "value": value, "tile": {"x": x, "y": y, "z": z}}
