@@ -11,7 +11,8 @@
   "dependencies": {
     "@deck.gl/core": "^8.8.0",
     "@deck.gl/geo-layers": "^8.9.19",
-    "@deck.gl/layers": "^8.8.0"
+    "@deck.gl/layers": "^8.8.0",
+    "chroma-js": "^2.4.2"
   },
   "devDependencies": {
     "vite": "^4.0.0"

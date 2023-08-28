@@ -1,6 +1,7 @@
 import {Deck} from '@deck.gl/core';
 import {H3HexagonLayer, TileLayer} from '@deck.gl/geo-layers';
 import {GeoJsonLayer} from "@deck.gl/layers";
+import chroma from 'chroma-js';
 
 
 // source: Natural Earth http://www.naturalearthdata.com/ via geojson.xyz
@@ -16,6 +17,8 @@ const INITIAL_VIEW_STATE = {
     bearing: 0,
     pitch: 0
 };
+
+const colorScale = chroma.scale("OrRd").domain([0,5]);
 
 new Deck({
     initialViewState: INITIAL_VIEW_STATE,
@@ -49,9 +52,9 @@ new Deck({
                     wireframe: false,
                     filled: true,
                     extruded: false,
-                    stroked: false,
+                    stroked: true,
                     getHexagon: d => d.h3index,
-                    getFillColor: d => [100, 0, (1 - d.value)  * 255, 255],
+                    getFillColor: d => colorScale(d.value).rgb(),
                     getLineColor: [0, 0, 255, 255],
                     lineWidthUnits: 'pixels',
                     lineWidth: 1,

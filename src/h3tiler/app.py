@@ -1,6 +1,5 @@
 import os
 
-import geopandas as gpd
 import mercantile
 import numpy as np
 import psycopg
@@ -40,7 +39,7 @@ def make_query_filter_first(
     """Filers at res 6 first and then does the aggregation"""
     return sql.SQL(
         """
-        select h3_to_parent(h3index, {}) h3, avg({}) from {} 
+        select h3_to_parent(h3index, {}) h3, avg({}) from {}
         where h3index = any({})
         group by h3
         """
@@ -53,15 +52,15 @@ def make_query_filter_first(
 
 
 def make_query_aggregate_first(
-    h3res: int, column: str, table: str = "h3_grid_deforestation_global"
+    h3res: int, column: str, table: str = "h3_grid_aqueduct_global"
 ) -> psycopg.sql.Composed:
     """Does the aggregation to desired h3res first then filters"""
     return sql.SQL(
         """
         select parent, agg_value
         from (
-            select h3_to_parent(h3index, {h3res}) parent, avg({column}) agg_value 
-            from {table} 
+            select h3_to_parent(h3index, {h3res}) parent, avg({column}) agg_value
+            from {table}
             group by parent
             ) as h3_grid
         where parent = any({tile_indexes})
@@ -76,25 +75,24 @@ def make_query_aggregate_first(
 
 @app.get(
     "/{z}/{x}/{y}",
-    responses={
-        200: {"content": {"application/json": {}}, "description": "Return a tile"}
-    },
+    responses={200: {"content": {"application/json": {}}, "description": "Return a tile"}},
     response_class=JSONResponse,
 )
 def tile(z: int, x: int, y: int):
-
     # Tile logic
     tile = mercantile.Tile(x=x, y=y, z=z)
     tile_poly = box(*mercantile.bounds(tile))
-    h3res = min(z, 6)
-    _, h3indexes = next(vector.geometries_to_h3_generator([tile_poly], np.array([0], dtype=np.uint64), h3res))
+    h3res = max(min(z, 6), 3)
+    _, h3indexes = next(
+        vector.geometries_to_h3_generator([tile_poly], np.array([0], dtype=np.uint64), h3res)
+    )
     h3indexes = [hex(index)[2:] for index in h3indexes]
 
     # DB
     with psycopg.connect(get_connection_info(), autocommit=True) as conn:
         with conn.cursor() as cur:
             cur.execute(
-                make_query_aggregate_first(h3res, "hansenLoss2021"),
+                make_query_aggregate_first(h3res, "bwsCat"),
                 # make_query_aggregate_first(h3res, "hansenLossBuffered2021"),
                 [h3indexes],
             )

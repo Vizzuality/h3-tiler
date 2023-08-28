@@ -1,0 +1,30 @@
+[project]
+name = "h3tiler"
+description = "A simple API for tiling H3 hexagons."
+readme = "README.md"
+requires-python = ">=3.9"
+authors = [{ name = "Biel Stela", email = "biel.stela@vizzuality.com" }]
+license = { text = "MIT" }
+keywords = ["h3", "GIS", "Fastapi", "Dynamic tile server"]
+classifiers = [
+    "Intended Audience :: Information Technology",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Topic :: Scientific/Engineering :: GIS",
+]
+dependencies = ["fastapi>=0.100.0", "h3ronpy>=0.17", "mercantile", "psycopg"]
+version = "0.1.0"
+
+[tool.black]
+line-length = 100
+
+[tool.isort]
+profile = "black"
+
+[tool.ruff]
+select = ["E", "F", "N"]
+line-length = 100
+ignore = []
