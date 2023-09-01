@@ -55,13 +55,13 @@ def paint_h3(h3indexes, h3res):
 def get_tile_from_h3index(h3_tile_index: str, column, table) -> list[dict[str, float]]:
     h3_tile_res = h3.get_resolution(h3_tile_index)
     # FIXME for now, we get hardcode levels of resolution under the demanded tile. Should be more sensible
-    h3_res = min(h3_tile_res + 3, 6)
+    h3_res = min(h3_tile_res + 5, 6)
 
     query = sql.SQL(
         """
-        select h3_to_parent(h3index, {h3_res}) h3parent, avg({col})
+        select h3_to_parent(h3index, {h3_res}) h3parent, avg({col}) value
         from {table}
-            where h3_to_parent(h3index, {h3_tile_res}) = {h3_tile_index}
+            where h3_to_parent(h3index, {h3_tile_res}) = {h3_tile_index} and {col} > 0
         group by h3parent;
         """
     ).format(
@@ -74,7 +74,7 @@ def get_tile_from_h3index(h3_tile_index: str, column, table) -> list[dict[str, f
     # TODO: improve talking with the db -> session should reuse connection?
     with psycopg.connect(get_connection_info()) as conn:
         with conn.cursor() as cur:
-            print(psycopg.ClientCursor(conn).mogrify(query))
+            # print(psycopg.ClientCursor(conn).mogrify(query))
             cur.execute(query)
 
             h3index_to_value = [

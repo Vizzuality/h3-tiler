@@ -2,6 +2,7 @@ import { Deck } from '@deck.gl/core';
 import { H3HexagonLayer, TileLayer } from '@deck.gl/geo-layers';
 import { GeoJsonLayer } from "@deck.gl/layers";
 import chroma from 'chroma-js';
+import {H3Tileset2D} from "./h3-tile-layer";
 
 
 // source: Natural Earth http://www.naturalearthdata.com/ via geojson.xyz
@@ -11,7 +12,7 @@ const COUNTRIES =
 const INITIAL_VIEW_STATE = {
     latitude: 51.47,
     longitude: 0.45,
-    zoom: 4,
+    zoom: 3,
     bearing: 0,
     pitch: 0
 };
@@ -34,8 +35,10 @@ new Deck({
             getFillColor: [200, 200, 200]
         }),
         new TileLayer({
+            TilesetClass: H3Tileset2D,
             id: 'tile-layer',
-            data: 'http://127.0.0.1:8000/tile/{z}/{x}/{y}',
+            // data: 'http://127.0.0.1:8000/tile/{z}/{x}/{y}',
+            data: 'http://127.0.0.1:8000/h3index/{h3index}',
             minZoom: 2,
             maxZoom: 6,
             tileSize: 512,
@@ -46,7 +49,7 @@ new Deck({
                 return new H3HexagonLayer({
                     id: `h3-layer`,
                     data: h3Indexes,
-                    highPrecision: true,
+                    highPrecision: 'auto',
                     pickable: true,
                     wireframe: false,
                     filled: true,
