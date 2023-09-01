@@ -1,6 +1,8 @@
 # h3 Tiler
 
-⚠ WIP ⚠
+A simple tiler for h3 hexagons.
+
+## Usage
 
 To run the client in `map/` run:
 

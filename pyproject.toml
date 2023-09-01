@@ -5,7 +5,7 @@ readme = "README.md"
 requires-python = ">=3.9"
 authors = [{ name = "Biel Stela", email = "biel.stela@vizzuality.com" }]
 license = { text = "MIT" }
-keywords = ["h3", "GIS", "Fastapi", "Dynamic tile server"]
+keywords = ["h3", "GIS", "Fastapi", "Tiler"]
 classifiers = [
     "Intended Audience :: Information Technology",
     "Intended Audience :: Science/Research",
@@ -15,7 +15,16 @@ classifiers = [
     "Programming Language :: Python :: 3.11",
     "Topic :: Scientific/Engineering :: GIS",
 ]
-dependencies = ["fastapi>=0.100.0", "h3ronpy>=0.17", "mercantile", "psycopg"]
+
+dependencies = [
+    "fastapi>=0.100.0",
+    "h3ronpy>=0.17",
+    "pydantic>=2.0.0",
+    "shapely>=2.0.1",
+    "mercantile>=1.2.1",
+    "psycopg>=3",
+]
+
 version = "0.1.0"
 
 [tool.black]
@@ -25,6 +34,14 @@ line-length = 100
 profile = "black"
 
 [tool.ruff]
-select = ["E", "F", "N"]
-line-length = 100
-ignore = []
+select = [
+#    "D1",   # pydocstyle errors
+    "E",    # pycodestyle errors
+    "W",    # pycodestyle warnings
+    "F",    # flake8
+    "C",    # flake8-comprehensions
+    "B",    # flake8-bugbear
+]
+ignore = [
+    "E501"  # line too long, handled by black
+]
