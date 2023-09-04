@@ -1,6 +1,6 @@
 import h3
 import psycopg
-from psycopg import sql
+from psycopg import AsyncConnection, sql
 
 from ..config import get_settings
 
@@ -17,7 +17,7 @@ def make_query_aggregate_first(
             from {table}
             group by parent
             ) as h3_grid
-        where parent = any({tile_indexes}) and agg_value > 0
+        where parent = any({tile_indexes}) and agg_value is not null;
         """
     ).format(
         h3res=sql.Literal(h3res),
@@ -52,17 +52,18 @@ def paint_h3(h3indexes, h3res):
     return h3index_to_value
 
 
-def get_tile_from_h3index(h3_tile_index: str, column, table) -> list[dict[str, float]]:
+async def get_tile_from_h3index(
+    h3_tile_index: str, column, table, connection: AsyncConnection
+) -> list[dict[str, float]]:
     h3_tile_res = h3.get_resolution(h3_tile_index)
     # FIXME for now, we get hardcode levels of resolution under the demanded tile. Should be more sensible
-    h3_res = min(h3_tile_res + 5, 6)
+    h3_res = min(h3_tile_res + 5, 8)
 
     query = sql.SQL(
         """
-        select h3_to_parent(h3index, {h3_res}) h3parent, avg({col}) value
+        select h3index, {col}
         from {table}
-            where h3_to_parent(h3index, {h3_tile_res}) = {h3_tile_index} and {col} > 0
-        group by h3parent;
+            where res = {h3_res} and h3_to_parent(h3index, {h3_tile_res}) = {h3_tile_index};
         """
     ).format(
         h3_res=sql.Literal(h3_res),
@@ -71,13 +72,10 @@ def get_tile_from_h3index(h3_tile_index: str, column, table) -> list[dict[str, f
         h3_tile_res=sql.Literal(h3_tile_res),
         h3_tile_index=sql.Literal(h3_tile_index),
     )
-    # TODO: improve talking with the db -> session should reuse connection?
-    with psycopg.connect(get_connection_info()) as conn:
-        with conn.cursor() as cur:
+    async with connection as conn:
+        async with conn.cursor() as cur:
             # print(psycopg.ClientCursor(conn).mogrify(query))
-            cur.execute(query)
-
-            h3index_to_value = [
-                {"h3index": h3index, "value": value} for h3index, value in cur.fetchall()
-            ]
+            await cur.execute(query)
+            results = await cur.fetchall()
+            h3index_to_value = [{"h3index": h3index, "value": value} for h3index, value in results]
     return h3index_to_value

@@ -1,9 +1,21 @@
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
+from psycopg_pool import AsyncConnectionPool
 from starlette.middleware.cors import CORSMiddleware
 
-from .routers.router import h3index_router, xyz_router
+from .adapters.db import get_connection_info
+from .routers.router import h3index_router
 
-app = FastAPI(name="H3-Tiler")
+
+@asynccontextmanager
+async def lifespan(app_: FastAPI):
+    app_.async_pool = AsyncConnectionPool(conninfo=get_connection_info())
+    yield
+    await app_.async_pool.close()
+
+
+app = FastAPI(name="H3-Tiler", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
@@ -13,5 +25,5 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.include_router(xyz_router)
+# app.include_router(xyz_router)
 app.include_router(h3index_router)

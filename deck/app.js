@@ -2,7 +2,7 @@ import { Deck } from '@deck.gl/core';
 import { H3HexagonLayer, TileLayer } from '@deck.gl/geo-layers';
 import { GeoJsonLayer } from "@deck.gl/layers";
 import chroma from 'chroma-js';
-import {H3Tileset2D} from "./h3-tile-layer";
+import { H3Tileset2D } from "./h3-tile-layer";
 
 
 // source: Natural Earth http://www.naturalearthdata.com/ via geojson.xyz
@@ -17,7 +17,7 @@ const INITIAL_VIEW_STATE = {
     pitch: 0
 };
 
-const colorScale = chroma.scale("OrRd").domain([0, 0.05]);
+const colorScale = chroma.scale("OrRd").domain([0, 135]);
 
 new Deck({
     initialViewState: INITIAL_VIEW_STATE,
@@ -64,5 +64,5 @@ new Deck({
             }
         }),
     ],
-    // getTooltip: ({ object }) => object && `x: ${object.tile.x}, y: ${object.tile.y}, z: ${object.tile.z}, value: ${object.value}`
+    // getTooltip: ({ object }) => object && `h3index: ${object.h3index}, value: ${object.value}`
 });

@@ -3,6 +3,7 @@ from fastapi import APIRouter
 from fastapi.encoders import jsonable_encoder
 from h3ronpy.arrow import vector
 from shapely.geometry import box
+from starlette.requests import Request
 from starlette.responses import JSONResponse
 
 from ..adapters.db import get_tile_from_h3index, paint_h3
@@ -35,9 +36,9 @@ def zxy_tile(z: int, x: int, y: int) -> JSONResponse:
     responses={200: {"content": {"application/json": {}}, "description": "Return a tile"}},
     response_class=JSONResponse,
 )
-def h3index(h3index: str) -> JSONResponse:
-    data = get_tile_from_h3index(
-        h3index, "deforestByHumanLu202010Km", "h3_grid_deforestation_global"
+async def h3index(h3index: str, request: Request) -> JSONResponse:
+    data = await get_tile_from_h3index(
+        h3index, "value", "h3_grid_deforestation_8", request.app.async_pool.connection()
     )
     json_data = jsonable_encoder(data)
     return JSONResponse(content=json_data)
