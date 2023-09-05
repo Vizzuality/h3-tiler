@@ -1,11 +1,10 @@
-import { Deck } from '@deck.gl/core';
-import { H3HexagonLayer, TileLayer } from '@deck.gl/geo-layers';
-import { GeoJsonLayer } from "@deck.gl/layers";
+import {Deck} from '@deck.gl/core';
+import {H3HexagonLayer, TileLayer} from '@deck.gl/geo-layers';
+import {GeoJsonLayer} from "@deck.gl/layers";
 import chroma from 'chroma-js';
-import { H3Tileset2D } from "./h3-tile-layer";
+import {H3Tileset2D} from "./h3-tile-layer";
 
 
-// source: Natural Earth http://www.naturalearthdata.com/ via geojson.xyz
 const COUNTRIES =
     'https://d2ad6b4ur7yvpq.cloudfront.net/naturalearth-3.3.0/ne_50m_admin_0_scale_rank.geojson'; //eslint-disable-line
 
@@ -44,7 +43,7 @@ new Deck({
             tileSize: 512,
             maxRequests: 10,  // max simultaneous requests. 0 means unlimited
             renderSubLayers: props => {
-                const { bbox: { west, south, east, north } } = props.tile;
+                const {bbox: {west, south, east, north}} = props.tile;
                 const h3Indexes = props.data; // List of H3 indexes for the tile
                 return new H3HexagonLayer({
                     id: `h3-layer`,

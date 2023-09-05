@@ -57,7 +57,7 @@ async def get_tile_from_h3index(
 ) -> list[dict[str, float]]:
     h3_tile_res = h3.get_resolution(h3_tile_index)
     # FIXME for now, we get hardcode levels of resolution under the demanded tile. Should be more sensible
-    h3_res = min(h3_tile_res + 5, 8)
+    h3_res = min(h3_tile_res + 4, 8)
 
     query = sql.SQL(
         """
