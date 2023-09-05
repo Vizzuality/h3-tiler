@@ -1,9 +1,12 @@
-import {_Tileset2D as Tileset2D} from '@deck.gl/geo-layers';
+import {_Tileset2D as Tileset2D, H3HexagonLayer, TileLayer} from '@deck.gl/geo-layers';
 import {cellToBoundary, cellToParent, getResolution, polygonToCells} from "h3-js";
 import bbox from "@turf/bbox";
 import {lineString} from "@turf/helpers";
+import chroma from "chroma-js";
 
-export class H3Tileset2D extends Tileset2D {
+const colorScale = chroma.scale("OrRd").domain([0, 135]);
+
+class H3Tileset2D extends Tileset2D {
 
     isTileVisible(tile, cullRect) {
         if (!tile.isVisible) {
@@ -61,7 +64,7 @@ export class H3Tileset2D extends Tileset2D {
             cells = polygonToCells(polygon, z, true);
         }
         // console.log(z)
-        // console.log(cells)
+        console.log(cells)
         return cells.map(h3index => ({"h3index": h3index}));
     }
 
@@ -89,3 +92,62 @@ export class H3Tileset2D extends Tileset2D {
         return {bbox: {west: cell_bbox[0], north: cell_bbox[3], east: cell_bbox[2], south: cell_bbox[1]}};
     }
 }
+
+
+export const DebugH3TileLayer = new TileLayer({
+    TilesetClass: H3Tileset2D,
+    id: 'tile-h3s-boundaries',
+    getTileData: tile => {
+        return {h3index: tile.index}
+    },
+    minZoom: 0,
+    maxZoom: 20,
+    tileSize: 512,  // FIXME: tileSize does not make any sense for h3 hex tiles. Should be removed.
+    maxRequests: 10,  // max simultaneous requests. Set 0 for unlimited
+    renderSubLayers: props => {
+        const h3Indexes = props.data; // List of H3 indexes for the tile
+        return new H3HexagonLayer({
+            id: `h3-boundaries`,
+            data: h3Indexes,
+            highPrecision: 'auto',
+            pickable: true,
+            wireframe: true,
+            filled: false,
+            extruded: false,
+            stroked: true,
+            getHexagon: d => d.h3index,
+            // getFillColor: d => colorScale(d.value).rgb(),
+            getLineColor: [0, 0, 255, 255],
+            lineWidthUnits: 'pixels',
+            lineWidth: 2,
+        });
+    }
+})
+
+export const H3TileLayer = new TileLayer({
+    TilesetClass: H3Tileset2D,
+    id: 'tile-h3s',
+    data: 'http://127.0.0.1:8000/h3index/{h3index}',
+    minZoom: 0,
+    maxZoom: 20,
+    tileSize: 512,  // FIXME: tileSize does not make any sense for h3 hex tiles. Should be removed.
+    maxRequests: 10,  // max simultaneous requests. Set 0 for unlimited
+    renderSubLayers: props => {
+        const h3Indexes = props.data; // List of H3 indexes for the tile
+        return new H3HexagonLayer({
+            id: `h3-layer`,
+            data: h3Indexes,
+            highPrecision: 'auto',
+            pickable: true,
+            wireframe: false,
+            filled: true,
+            extruded: false,
+            stroked: false,
+            getHexagon: d => d.h3index,
+            getFillColor: d => colorScale(d.value).rgb(),
+            getLineColor: [0, 0, 255, 255],
+            lineWidthUnits: 'pixels',
+            lineWidth: 1,
+        });
+    }
+})
