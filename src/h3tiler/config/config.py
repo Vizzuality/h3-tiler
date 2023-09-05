@@ -1,9 +1,12 @@
+"""App configuration"""
 from functools import lru_cache
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
+    """App configuration"""
+
     POSTGRES_HOST: str
     POSTGRES_PORT: str
     POSTGRES_USERNAME: str
@@ -14,4 +17,5 @@ class Settings(BaseSettings):
 
 @lru_cache()
 def get_settings() -> Settings:
+    """Returns a Settings object with the app config"""
     return Settings()

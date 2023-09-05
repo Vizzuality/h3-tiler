@@ -35,7 +35,7 @@ profile = "black"
 
 [tool.ruff]
 select = [
-#    "D1",   # pydocstyle errors
+    "D1",   # pydocstyle errors
     "E",    # pycodestyle errors
     "W",    # pycodestyle warnings
     "F",    # flake8

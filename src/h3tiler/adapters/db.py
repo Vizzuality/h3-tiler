@@ -1,3 +1,8 @@
+"""
+Database adapter for h3tiler
+
+Here are the functions that talk to the db and return data given a h3index.
+"""
 import h3
 import psycopg
 from psycopg import AsyncConnection, sql
@@ -37,7 +42,8 @@ def get_connection_info() -> str:
     )
 
 
-def paint_h3(h3indexes, h3res):
+def xyz_paint_h3(h3indexes, h3res):
+    """DEPRECATED: we use h3index now instead of xyz"""
     with psycopg.connect(get_connection_info(), autocommit=True) as conn:
         with conn.cursor() as cur:
             cur.execute(
@@ -55,8 +61,8 @@ def paint_h3(h3indexes, h3res):
 async def get_tile_from_h3index(
     h3_tile_index: str, column, table, connection: AsyncConnection
 ) -> list[dict[str, float]]:
+    """Query and fetch the tile cells from the database"""
     h3_tile_res = h3.get_resolution(h3_tile_index)
-    # FIXME for now, we get hardcode levels of resolution under the demanded tile. Should be more sensible
     h3_res = min(h3_tile_res + 4, 8)
 
     query = sql.SQL(

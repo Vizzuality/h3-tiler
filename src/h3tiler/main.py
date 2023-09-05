@@ -1,3 +1,5 @@
+"""Main module for the H3-Tiler API."""
+
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
@@ -10,6 +12,7 @@ from .routers.router import h3index_router
 
 @asynccontextmanager
 async def lifespan(app_: FastAPI):
+    """Async context manager for the app lifespan."""
     app_.async_pool = AsyncConnectionPool(conninfo=get_connection_info())
     yield
     await app_.async_pool.close()

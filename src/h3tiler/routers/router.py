@@ -1,3 +1,5 @@
+"""Router for h3tiler."""
+
 import mercantile
 from fastapi import APIRouter
 from fastapi.encoders import jsonable_encoder
@@ -6,7 +8,7 @@ from shapely.geometry import box
 from starlette.requests import Request
 from starlette.responses import JSONResponse
 
-from ..adapters.db import get_tile_from_h3index, paint_h3
+from ..adapters.db import get_tile_from_h3index, xyz_paint_h3
 
 xyz_router = APIRouter()
 h3index_router = APIRouter()
@@ -18,14 +20,13 @@ h3index_router = APIRouter()
     response_class=JSONResponse,
 )
 def zxy_tile(z: int, x: int, y: int) -> JSONResponse:
-    # t0 = datetime.now()
-    # with Profiler() as profiler:
+    """Request a tile of h3 cells from a zxy tile"""
     tile = mercantile.Tile(x=x, y=y, z=z)
     h3res = max(min(z, 6), 3)
     h3indexes = vector.geometry_to_cells(box(*mercantile.bounds(tile)), h3res).to_pylist()
     h3indexes = [hex(index)[2:] for index in h3indexes]
 
-    h3index_to_value = paint_h3(h3indexes, h3res)
+    h3index_to_value = xyz_paint_h3(h3indexes, h3res)
 
     json_data = jsonable_encoder(h3index_to_value)
     return JSONResponse(content=json_data)
@@ -37,6 +38,7 @@ def zxy_tile(z: int, x: int, y: int) -> JSONResponse:
     response_class=JSONResponse,
 )
 async def h3index(h3index: str, request: Request) -> JSONResponse:
+    """Request a tile of h3 cells from a h3index"""
     data = await get_tile_from_h3index(
         h3index, "value", "h3_grid_deforestation_8", request.app.async_pool.connection()
     )
