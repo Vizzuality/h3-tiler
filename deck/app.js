@@ -34,5 +34,5 @@ const deck = new Deck({
         H3TileLayer,
         DebugH3TileLayer
     ],
-    // getTooltip: ({ object }) => object && `h3index: ${object.h3index}, value: ${object.value}`
+    getTooltip: ({ object }) => object && `h3index: ${object.h3index}`
 });

@@ -12,34 +12,7 @@ class H3Tileset2D extends Tileset2D {
      * Should be adapted to h3 hex tiles. how? no idea...
      * */
     isTileVisible(tile, cullRect) {
-        if (!tile.isVisible) {
-            return false;
-        }
-        if (cullRect && this._viewport) {
-            const boundsArr = this._getCullBounds({
-                viewport: this._viewport,
-                z: this._zRange,
-                cullRect
-            });
-            const {
-                bbox
-            } = tile;
-            for (const [minX, minY, maxX, maxY] of boundsArr) {
-                let overlaps;
-                if ('west' in bbox) {
-                    overlaps = bbox.west < maxX && bbox.east > minX && bbox.south < maxY && bbox.north > minY;
-                } else {
-                    const y0 = Math.min(bbox.top, bbox.bottom);
-                    const y1 = Math.max(bbox.top, bbox.bottom);
-                    overlaps = bbox.left < maxX && bbox.right > minX && y0 < maxY && y1 > minY;
-                }
-                if (overlaps) {
-                    return true;
-                }
-            }
-            return false;
-        }
-        return true;
+        return super.isTileVisible(tile, cullRect);
     }
 
     /** Returns the tile indices that are needed to cover the viewport
@@ -50,10 +23,16 @@ class H3Tileset2D extends Tileset2D {
      * */
     getTileIndices(opts) {
         // get z level from viewport original implementation
-        let z = Math.min(Math.max(Math.floor(opts.viewport.zoom) - 2, 0), 4);
+        let z = Math.min(Math.max(Math.floor(opts.viewport.zoom) - 3, 1), 4);
         // [minX, minY, maxX, maxY]
-        const bounds = opts.viewport.getBounds();
-        const polygon = [
+        let bounds = opts.viewport.getBounds();
+        const buffer = Math.max(bounds[2] - bounds[0], bounds[3] - bounds[1]) * 0.05;
+        // Add a buffer of 10% to the viewport bounds so the border tiles are also included
+        bounds[0] -= buffer;
+        bounds[1] -= buffer;
+        bounds[2] += buffer;
+        bounds[3] += buffer;
+        const viewportPolygon = [
             [bounds[0], bounds[1]],
             [bounds[0], bounds[3]],
             [bounds[2], bounds[3]],
@@ -61,13 +40,12 @@ class H3Tileset2D extends Tileset2D {
             [bounds[0], bounds[1]]
         ]
         // fill the viewport polygon with h3 cells
-        let cells = polygonToCells(polygon, z, true);
-        while (cells.length > 30 && z >= 0) {
+        let cells = polygonToCells(viewportPolygon, z, true);
+        while (cells.length > 150 && z >= 0) {
+            cells = polygonToCells(viewportPolygon, z, true);
             z -= 1;
-            cells = polygonToCells(polygon, z, true);
         }
-        // console.log(z)
-        // console.log(cells)
+        console.log(cells.length)
         return cells.map(h3index => ({"h3index": h3index}));
     }
 
@@ -110,17 +88,18 @@ export const DebugH3TileLayer = new TileLayer({
     minZoom: 0,
     maxZoom: 20,
     renderSubLayers: props => {
+        // console.log(props)
         return new H3HexagonLayer({
             id: props.id,
             data: props.data,
             highPrecision: 'auto',
             pickable: true,
             wireframe: true,
-            filled: false,
+            filled: true,
             extruded: false,
             stroked: true,
             getHexagon: d => d.h3index,
-            getFillColor: d => colorScale(d.value).rgb(),
+            getFillColor: d => [0, 0, 255, 0],
             getLineColor: [0, 0, 255, 255],
             lineWidthUnits: 'pixels',
             lineWidth: 20,
