@@ -4,10 +4,13 @@ import bbox from "@turf/bbox";
 import {lineString} from "@turf/helpers";
 import chroma from "chroma-js";
 
-const colorScale = chroma.scale("OrRd").domain([0, 135]);
 
 class H3Tileset2D extends Tileset2D {
 
+    /** Returns true if the tile is visible in the current viewport
+     * FIXME: This is a copy of the original implementation in deck.gl
+     * Should be adapted to h3 hex tiles. how? no idea...
+     * */
     isTileVisible(tile, cullRect) {
         if (!tile.isVisible) {
             return false;
@@ -64,7 +67,7 @@ class H3Tileset2D extends Tileset2D {
             cells = polygonToCells(polygon, z, true);
         }
         // console.log(z)
-        console.log(cells)
+        // console.log(cells)
         return cells.map(h3index => ({"h3index": h3index}));
     }
 
@@ -78,8 +81,8 @@ class H3Tileset2D extends Tileset2D {
 
     getParentIndex({h3index}) {
         const res = getResolution(h3index);
-        // FIXME: this return raises a type warning in the ide which expects and object like
-        // {x: number, y: number, z: number} and I don't know how to patch he this type to a h3index
+        // FIXME: this return raises a type warning in the ide which expects an object like
+        //  {x: number, y: number, z: number} and I don't know how to patch he this type to a h3index
         return {"h3index": cellToParent(h3index, res - 1)};
     }
 
@@ -88,27 +91,28 @@ class H3Tileset2D extends Tileset2D {
      * */
     getTileMetadata(index) {
         let cell_bbox = bbox(lineString(cellToBoundary(index.h3index, true)));
-        // cell_bbox is [minX, minY, maxX, maxY], but we need [west, north, east, south]
+        // bbox is [minX, minY, maxX, maxY]
         return {bbox: {west: cell_bbox[0], north: cell_bbox[3], east: cell_bbox[2], south: cell_bbox[1]}};
     }
 }
 
+const colorScale = chroma.scale("Reds").domain([0, 135]);
 
+/** Debug layer that renders the h3 hex tiles as wireframes
+ * and helps to inspect which tiles are being requested and at which resolution
+ * */
 export const DebugH3TileLayer = new TileLayer({
     TilesetClass: H3Tileset2D,
     id: 'tile-h3s-boundaries',
     getTileData: tile => {
-        return {h3index: tile.index}
+        return [tile.index]
     },
     minZoom: 0,
     maxZoom: 20,
-    tileSize: 512,  // FIXME: tileSize does not make any sense for h3 hex tiles. Should be removed.
-    maxRequests: 10,  // max simultaneous requests. Set 0 for unlimited
     renderSubLayers: props => {
-        const h3Indexes = props.data; // List of H3 indexes for the tile
         return new H3HexagonLayer({
-            id: `h3-boundaries`,
-            data: h3Indexes,
+            id: props.id,
+            data: props.data,
             highPrecision: 'auto',
             pickable: true,
             wireframe: true,
@@ -116,10 +120,10 @@ export const DebugH3TileLayer = new TileLayer({
             extruded: false,
             stroked: true,
             getHexagon: d => d.h3index,
-            // getFillColor: d => colorScale(d.value).rgb(),
+            getFillColor: d => colorScale(d.value).rgb(),
             getLineColor: [0, 0, 255, 255],
             lineWidthUnits: 'pixels',
-            lineWidth: 2,
+            lineWidth: 20,
         });
     }
 })
@@ -133,10 +137,9 @@ export const H3TileLayer = new TileLayer({
     tileSize: 512,  // FIXME: tileSize does not make any sense for h3 hex tiles. Should be removed.
     maxRequests: 10,  // max simultaneous requests. Set 0 for unlimited
     renderSubLayers: props => {
-        const h3Indexes = props.data; // List of H3 indexes for the tile
         return new H3HexagonLayer({
-            id: `h3-layer`,
-            data: h3Indexes,
+            id: props.id,
+            data: props.data,
             highPrecision: 'auto',
             pickable: true,
             wireframe: false,

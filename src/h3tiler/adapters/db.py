@@ -3,6 +3,7 @@ Database adapter for h3tiler
 
 Here are the functions that talk to the db and return data given a h3index.
 """
+
 import h3
 import psycopg
 from psycopg import AsyncConnection, sql

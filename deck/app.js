@@ -16,7 +16,7 @@ const INITIAL_VIEW_STATE = {
 };
 
 
-new Deck({
+const deck = new Deck({
     initialViewState: INITIAL_VIEW_STATE,
     controller: true,
     layers: [
@@ -32,7 +32,7 @@ new Deck({
             getFillColor: [200, 200, 200]
         }),
         H3TileLayer,
-        // DebugH3TileLayer
+        DebugH3TileLayer
     ],
     // getTooltip: ({ object }) => object && `h3index: ${object.h3index}, value: ${object.value}`
 });
