@@ -3,7 +3,25 @@ import {cellToBoundary, cellToParent, getResolution, polygonToCells} from "h3-js
 import bbox from "@turf/bbox";
 import {lineString} from "@turf/helpers";
 import chroma from "chroma-js";
+import {GeoJsonLayer} from "@deck.gl/layers";
+import bboxPolygon from "@turf/bbox-polygon";
 
+window.polygonToCells = polygonToCells;
+
+function fillBBoxes(bboxes, z) {
+    let cells = [];
+    for (let bbox of bboxes) {
+        const poly = [
+            [bbox[0], bbox[1]],
+            [bbox[0], bbox[3]],
+            [bbox[2], bbox[3]],
+            [bbox[2], bbox[1]],
+            [bbox[0], bbox[1]]
+        ]
+        cells = cells.concat(polygonToCells(poly, z, true));
+    }
+    return cells;
+}
 
 class H3Tileset2D extends Tileset2D {
 
@@ -23,29 +41,37 @@ class H3Tileset2D extends Tileset2D {
      * */
     getTileIndices(opts) {
         // get z level from viewport original implementation
-        let z = Math.min(Math.max(Math.floor(opts.viewport.zoom) - 3, 1), 4);
+        let z = Math.min(Math.max(Math.floor(opts.viewport.zoom) - 3, 0), 4);
         // [minX, minY, maxX, maxY]
         let bounds = opts.viewport.getBounds();
+
+        // make a buffer with x % of the larger axis,
+        // so the hexagons which center lays out of the viewport are also included
         const buffer = Math.max(bounds[2] - bounds[0], bounds[3] - bounds[1]) * 0.05;
-        // Add a buffer of 10% to the viewport bounds so the border tiles are also included
-        bounds[0] -= buffer;
-        bounds[1] -= buffer;
-        bounds[2] += buffer;
-        bounds[3] += buffer;
-        const viewportPolygon = [
-            [bounds[0], bounds[1]],
-            [bounds[0], bounds[3]],
-            [bounds[2], bounds[3]],
-            [bounds[2], bounds[1]],
-            [bounds[0], bounds[1]]
-        ]
+        bounds[0] = Math.max(bounds[0] - buffer, -180);
+        bounds[1] = Math.max(bounds[1] - buffer, -90);
+        bounds[2] = Math.min(bounds[2] + buffer, 180);
+        bounds[3] = Math.min(bounds[3] + buffer, 90);
+        // polygons spanning more than 180 degrees need to be split in two parts to be correctly covered by h3
+        // https://github.com/uber/h3-js/issues/180#issuecomment-1652453683
+        // So split the bounds in two parts
+        if (bounds[2] - bounds[0] > 180) {
+            let bounds2 = [...bounds];
+            let xSplitPoint = (bounds[2] - bounds[0]) / 2;
+            // new min and max X at split point
+            bounds[2] -= xSplitPoint;
+            bounds2[0] += xSplitPoint;
+            bounds = [bounds, bounds2];
+        }
+        else {
+            bounds = [bounds];
+        }
         // fill the viewport polygon with h3 cells
-        let cells = polygonToCells(viewportPolygon, z, true);
-        while (cells.length > 150 && z >= 0) {
-            cells = polygonToCells(viewportPolygon, z, true);
+        let cells = fillBBoxes(bounds, z);
+        while (cells.length > 150 && z > 0) {
+            cells = fillBBoxes(bounds, z);
             z -= 1;
         }
-        console.log(cells.length)
         return cells.map(h3index => ({"h3index": h3index}));
     }
 
@@ -74,7 +100,7 @@ class H3Tileset2D extends Tileset2D {
     }
 }
 
-const colorScale = chroma.scale("Reds").domain([0, 135]);
+const colorScale = chroma.scale("YlOrBr").domain([1, 90]);
 
 /** Debug layer that renders the h3 hex tiles as wireframes
  * and helps to inspect which tiles are being requested and at which resolution
@@ -107,6 +133,32 @@ export const DebugH3TileLayer = new TileLayer({
     }
 })
 
+
+export const DebugH3BBoxTileLayer = new TileLayer({
+    TilesetClass: H3Tileset2D,
+    id: 'tile-h3s-bboxes',
+    getTileData: tile => {
+        return bboxPolygon(bbox(lineString(cellToBoundary(tile.index.h3index, true))))
+    },
+    minZoom: 0,
+    maxZoom: 20,
+    renderSubLayers: props => {
+        return new GeoJsonLayer({
+            id: props.id,
+            data: props.data,
+            getPolygon: d => d.geometry.coordinates[0],
+            pickable: false,
+            stroked: true,
+            filled: false,
+            wireframe: true,
+            lineWidthMinPixels: 2,
+            getLineColor: [255, 0, 0],
+            getLineWidth: 2
+        });
+    }
+})
+
+
 export const H3TileLayer = new TileLayer({
     TilesetClass: H3Tileset2D,
     id: 'tile-h3s',
@@ -114,7 +166,7 @@ export const H3TileLayer = new TileLayer({
     minZoom: 0,
     maxZoom: 20,
     tileSize: 512,  // FIXME: tileSize does not make any sense for h3 hex tiles. Should be removed.
-    maxRequests: 10,  // max simultaneous requests. Set 0 for unlimited
+    maxRequests: -1,  // max simultaneous requests. Set 0 for unlimited
     renderSubLayers: props => {
         return new H3HexagonLayer({
             id: props.id,

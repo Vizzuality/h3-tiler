@@ -1,7 +1,7 @@
 import {Deck} from '@deck.gl/core';
 import {GeoJsonLayer} from "@deck.gl/layers";
 import chroma from 'chroma-js';
-import {DebugH3TileLayer, H3TileLayer} from "./h3-tile-layer";
+import {DebugH3BBoxTileLayer, DebugH3TileLayer, H3TileLayer} from "./h3-tile-layer";
 
 
 const COUNTRIES =
@@ -32,7 +32,8 @@ const deck = new Deck({
             getFillColor: [200, 200, 200]
         }),
         H3TileLayer,
-        DebugH3TileLayer
+        // DebugH3TileLayer,
+        // DebugH3BBoxTileLayer
     ],
     getTooltip: ({ object }) => object && `h3index: ${object.h3index}`
 });
