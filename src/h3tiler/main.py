@@ -14,7 +14,7 @@ from .routers.router import h3index_router
 
 @asynccontextmanager
 async def lifespan(app_: FastAPI):
-    """Async context manager for the app lifespan."""
+    """Share a connection pool across the app."""
     app_.async_pool = AsyncConnectionPool(conninfo=get_connection_info())
     yield
     await app_.async_pool.close()
