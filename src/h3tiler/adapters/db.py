@@ -70,7 +70,7 @@ async def get_tile_from_h3index(
         """
         select h3index, {col}
         from {table}
-            where res = {h3_res} and h3_to_parent(h3index, {h3_tile_res}) = {h3_tile_index};
+            where res = {h3_res} and h3_to_parent(h3index, {h3_tile_res}) = {h3_tile_index} and {col} is not null;
         """
     ).format(
         h3_res=sql.Literal(h3_res),
