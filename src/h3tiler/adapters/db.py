@@ -79,10 +79,10 @@ async def get_tile_from_h3index(
         h3_tile_res=sql.Literal(h3_tile_res),
         h3_tile_index=sql.Literal(h3_tile_index),
     )
-    async with connection as conn:
-        async with conn.cursor() as cur:
-            # print(psycopg.ClientCursor(conn).mogrify(query))
-            await cur.execute(query)
-            results = await cur.fetchall()
-            h3index_to_value = [{"h3index": h3index, "value": value} for h3index, value in results]
+
+    async with connection.cursor() as cur:
+        # print(psycopg.ClientCursor(conn).mogrify(query))
+        await cur.execute(query)
+        results = await cur.fetchall()
+        h3index_to_value = [{"h3index": h3index, "value": value} for h3index, value in results]
     return h3index_to_value

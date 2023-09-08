@@ -31,7 +31,7 @@ function prepareBounds(bounds) {
     // Add a buffer with x % of the larger axis,
     // so the hexagons which center lays out of the viewport are also included.
     // Also, we need to clamp the bounds to the world boundaries.
-    const buffer = Math.max(bounds[2] - bounds[0], bounds[3] - bounds[1]) * 0.05;
+    const buffer = Math.max(bounds[2] - bounds[0], bounds[3] - bounds[1]) * 0.1;
     bounds[0] = Math.max(bounds[0] - buffer, -180);
     bounds[1] = Math.max(bounds[1] - buffer, -90);
     bounds[2] = Math.min(bounds[2] + buffer, 180);

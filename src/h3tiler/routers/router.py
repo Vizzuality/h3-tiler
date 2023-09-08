@@ -39,8 +39,7 @@ def zxy_tile(z: int, x: int, y: int) -> JSONResponse:
 )
 async def h3index(h3index: str, request: Request) -> JSONResponse:
     """Request a tile of h3 cells from a h3index"""
-    data = await get_tile_from_h3index(
-        h3index, "value", "h3_grid_deforestation_8", request.app.async_pool.connection()
-    )
+    async with request.app.async_pool.connection() as conn:
+        data = await get_tile_from_h3index(h3index, "value", "h3_grid_deforestation_8", conn)
     json_data = jsonable_encoder(data)
     return JSONResponse(content=json_data)
