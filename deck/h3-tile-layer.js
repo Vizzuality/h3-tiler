@@ -8,6 +8,9 @@ import bboxPolygon from "@turf/bbox-polygon";
 
 window.polygonToCells = polygonToCells;
 
+const COLORSCALE = chroma.scale("YlOrBr").domain([1, 90]);
+
+/** Fills the viewport bbox polygon(s) with h3 cells */
 function fillBBoxes(bboxes, z) {
     let cells = [];
     for (let bbox of bboxes) {
@@ -23,11 +26,36 @@ function fillBBoxes(bboxes, z) {
     return cells;
 }
 
+/** Prepares the viewport bounds to be correct for filling with h3 cells */
+function prepareBounds(bounds) {
+    // Add a buffer with x % of the larger axis,
+    // so the hexagons which center lays out of the viewport are also included.
+    // Also, we need to clamp the bounds to the world boundaries.
+    const buffer = Math.max(bounds[2] - bounds[0], bounds[3] - bounds[1]) * 0.05;
+    bounds[0] = Math.max(bounds[0] - buffer, -180);
+    bounds[1] = Math.max(bounds[1] - buffer, -90);
+    bounds[2] = Math.min(bounds[2] + buffer, 180);
+    bounds[3] = Math.min(bounds[3] + buffer, 90);
+    // polygons spanning more than 180 degrees need to be split in two parts to be correctly covered by h3
+    // https://github.com/uber/h3-js/issues/180#issuecomment-1652453683
+    // So split the bounds in two parts
+    if (bounds[2] - bounds[0] > 180) {
+        let bounds2 = [...bounds];
+        let xSplitPoint = (bounds[2] - bounds[0]) / 2;
+        // new min and max X at split point
+        bounds[2] -= xSplitPoint;
+        bounds2[0] += xSplitPoint;
+        return [bounds, bounds2];
+    } else {
+        return [bounds];
+    }
+}
+
 class H3Tileset2D extends Tileset2D {
 
     /** Returns true if the tile is visible in the current viewport
      * FIXME: This is a copy of the original implementation in deck.gl
-     * Should be adapted to h3 hex tiles. how? no idea...
+     * Should be adapted to h3 tiles. how? no idea...
      * */
     isTileVisible(tile, cullRect) {
         return super.isTileVisible(tile, cullRect);
@@ -43,29 +71,7 @@ class H3Tileset2D extends Tileset2D {
         // get z level from viewport original implementation
         let z = Math.min(Math.max(Math.floor(opts.viewport.zoom) - 3, 0), 4);
         // [minX, minY, maxX, maxY]
-        let bounds = opts.viewport.getBounds();
-
-        // make a buffer with x % of the larger axis,
-        // so the hexagons which center lays out of the viewport are also included
-        const buffer = Math.max(bounds[2] - bounds[0], bounds[3] - bounds[1]) * 0.05;
-        bounds[0] = Math.max(bounds[0] - buffer, -180);
-        bounds[1] = Math.max(bounds[1] - buffer, -90);
-        bounds[2] = Math.min(bounds[2] + buffer, 180);
-        bounds[3] = Math.min(bounds[3] + buffer, 90);
-        // polygons spanning more than 180 degrees need to be split in two parts to be correctly covered by h3
-        // https://github.com/uber/h3-js/issues/180#issuecomment-1652453683
-        // So split the bounds in two parts
-        if (bounds[2] - bounds[0] > 180) {
-            let bounds2 = [...bounds];
-            let xSplitPoint = (bounds[2] - bounds[0]) / 2;
-            // new min and max X at split point
-            bounds[2] -= xSplitPoint;
-            bounds2[0] += xSplitPoint;
-            bounds = [bounds, bounds2];
-        }
-        else {
-            bounds = [bounds];
-        }
+        let bounds = prepareBounds(opts.viewport.getBounds());
         // fill the viewport polygon with h3 cells
         let cells = fillBBoxes(bounds, z);
         while (cells.length > 150 && z > 0) {
@@ -86,12 +92,12 @@ class H3Tileset2D extends Tileset2D {
     getParentIndex({h3index}) {
         const res = getResolution(h3index);
         // FIXME: this return raises a type warning in the ide which expects an object like
-        //  {x: number, y: number, z: number} and I don't know how to patch he this type to a h3index
+        //  {x: number, y: number, z: number} and I don't know how to patch this type to {h3index: string}
         return {"h3index": cellToParent(h3index, res - 1)};
     }
 
     /** Returns the tile's bounding box
-     * Needed for setting BoundingBox in Tile2DHeader (aka tile param)
+     * Needed for setting BoundingBox in Tile2DHeader (aka tile param in getTileData of TileLayer)
      * */
     getTileMetadata(index) {
         let cell_bbox = bbox(lineString(cellToBoundary(index.h3index, true)));
@@ -100,7 +106,6 @@ class H3Tileset2D extends Tileset2D {
     }
 }
 
-const colorScale = chroma.scale("YlOrBr").domain([1, 90]);
 
 /** Debug layer that renders the h3 hex tiles as wireframes
  * and helps to inspect which tiles are being requested and at which resolution
@@ -133,7 +138,7 @@ export const DebugH3TileLayer = new TileLayer({
     }
 })
 
-
+/** Debug layer for the tile's bounding boxes */
 export const DebugH3BBoxTileLayer = new TileLayer({
     TilesetClass: H3Tileset2D,
     id: 'tile-h3s-bboxes',
@@ -178,7 +183,7 @@ export const H3TileLayer = new TileLayer({
             extruded: false,
             stroked: false,
             getHexagon: d => d.h3index,
-            getFillColor: d => colorScale(d.value).rgb(),
+            getFillColor: d => COLORSCALE(d.value).rgb(),
             getLineColor: [0, 0, 255, 255],
             lineWidthUnits: 'pixels',
             lineWidth: 1,
