@@ -8,7 +8,7 @@ import bboxPolygon from "@turf/bbox-polygon";
 
 window.polygonToCells = polygonToCells;
 
-const COLORSCALE = chroma.scale("YlOrBr").domain([1, 90]);
+const COLORSCALE = chroma.scale("viridis").domain([0, 130]);
 
 /** Fills the viewport bbox polygon(s) with h3 cells */
 function fillBBoxes(bboxes, z) {
@@ -29,7 +29,7 @@ function fillBBoxes(bboxes, z) {
 /** Prepares the viewport bounds to be correct for filling with h3 cells */
 function prepareBounds(bounds) {
     // Add a buffer with x % of the larger axis,
-    // so the hexagons which center lays out of the viewport are also included.
+    // so the hexagons which centroid lays out of the viewport are also included.
     // Also, we need to clamp the bounds to the world boundaries.
     const buffer = Math.max(bounds[2] - bounds[0], bounds[3] - bounds[1]) * 0.1;
     bounds[0] = Math.max(bounds[0] - buffer, -180);
@@ -54,8 +54,7 @@ function prepareBounds(bounds) {
 class H3Tileset2D extends Tileset2D {
 
     /** Returns true if the tile is visible in the current viewport
-     * FIXME: This is a copy of the original implementation in deck.gl
-     * Should be adapted to h3 tiles. how? no idea...
+     * FIXME: Should be adapted to h3 tiles. How? no idea...
      * */
     isTileVisible(tile, cullRect) {
         return super.isTileVisible(tile, cullRect);
@@ -68,16 +67,16 @@ class H3Tileset2D extends Tileset2D {
      * it decreases the resolution until the number of cells is below a threshold.
      * */
     getTileIndices(opts) {
-        // get z level from viewport original implementation
-        let z = Math.min(Math.max(Math.floor(opts.viewport.zoom) - 3, 0), 4);
-        // [minX, minY, maxX, maxY]
+        let tileRes = Math.min(Math.max(Math.floor(opts.viewport.zoom) - 3, 0), 3);
         let bounds = prepareBounds(opts.viewport.getBounds());
-        // fill the viewport polygon with h3 cells
-        let cells = fillBBoxes(bounds, z);
-        while (cells.length > 150 && z > 0) {
-            cells = fillBBoxes(bounds, z);
-            z -= 1;
+        let cells = fillBBoxes(bounds, tileRes);
+        // TODO: The resolution should be computed with a sensible algo from the viewport size,
+        //  and not fixed on the fly with a magic number to limit the number of cells.
+        while (cells.length > 50 && tileRes > 0) {
+            cells = fillBBoxes(bounds, tileRes);
+            tileRes -= 1;
         }
+        console.log("h3 resolution: " + tileRes + "\n zoom: " + opts.viewport.zoom)
         return cells.map(h3index => ({"h3index": h3index}));
     }
 
@@ -107,8 +106,8 @@ class H3Tileset2D extends Tileset2D {
 }
 
 
-/** Debug layer that renders the h3 hex tiles as wireframes
- * and helps to inspect which tiles are being requested and at which resolution
+/** Debug layer that renders the h3 hex tiles as polygons.
+ * Help to inspect which tiles are being requested and at which resolution
  * */
 export const DebugH3TileLayer = new TileLayer({
     TilesetClass: H3Tileset2D,
@@ -133,7 +132,7 @@ export const DebugH3TileLayer = new TileLayer({
             getFillColor: d => [0, 0, 255, 0],
             getLineColor: [0, 0, 255, 255],
             lineWidthUnits: 'pixels',
-            lineWidth: 20,
+            getLineWidth: 2
         });
     }
 })
@@ -171,7 +170,8 @@ export const H3TileLayer = new TileLayer({
     minZoom: 0,
     maxZoom: 20,
     tileSize: 512,  // FIXME: tileSize does not make any sense for h3 hex tiles. Should be removed.
-    maxRequests: -1,  // max simultaneous requests. Set 0 for unlimited
+    maxRequests: 6,  // max simultaneous requests. Set 0 for unlimited
+    maxCacheSize: 300,  // max number of tiles to keep in the cache
     renderSubLayers: props => {
         return new H3HexagonLayer({
             id: props.id,

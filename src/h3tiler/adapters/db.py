@@ -26,7 +26,7 @@ async def get_tile_from_h3index(
 ) -> list[dict[str, float]]:
     """Query and fetch the tile cells from the database"""
     h3_tile_res = h3.get_resolution(h3_tile_index)
-    h3_res = min(h3_tile_res + 4, 8)
+    h3_res = min(h3_tile_res + 5, 8)
 
     query = sql.SQL(
         """

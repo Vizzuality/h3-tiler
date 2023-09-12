@@ -1,6 +1,5 @@
 import {Deck} from '@deck.gl/core';
 import {GeoJsonLayer} from "@deck.gl/layers";
-import chroma from 'chroma-js';
 import {DebugH3BBoxTileLayer, DebugH3TileLayer, H3TileLayer} from "./h3-tile-layer";
 
 
