@@ -11,6 +11,7 @@ class Settings(BaseSettings):
     POSTGRES_PORT: str
     POSTGRES_USERNAME: str
     POSTGRES_PASSWORD: str
+    POSTGRES_DB: str
 
     model_config = SettingsConfigDict(env_file="h3tiler/.env")
 

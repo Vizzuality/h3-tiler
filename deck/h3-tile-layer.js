@@ -6,6 +6,8 @@ import chroma from "chroma-js";
 import {GeoJsonLayer} from "@deck.gl/layers";
 import bboxPolygon from "@turf/bbox-polygon";
 
+import {tableFromIPC} from "apache-arrow";
+
 window.polygonToCells = polygonToCells;
 
 const COLORSCALE = chroma.scale("viridis").domain([0, 130]);
@@ -167,6 +169,19 @@ export const H3TileLayer = new TileLayer({
     TilesetClass: H3Tileset2D,
     id: 'tile-h3s',
     data: 'http://127.0.0.1:8000/h3index/{h3index}',
+    getTileData: (tile) => {
+        const {signal} = tile;
+        const response = fetch(tile.url, {signal});
+
+        if (signal.aborted) {
+           return null;
+        }
+        return response.then(resp => resp.arrayBuffer()).then(buffer => {
+            const table = tableFromIPC(buffer);
+            console.log(table)
+            return table;
+        });
+    },
     minZoom: 0,
     maxZoom: 20,
     tileSize: 512,  // FIXME: tileSize does not make any sense for h3 hex tiles. Should be removed.
@@ -182,7 +197,9 @@ export const H3TileLayer = new TileLayer({
             filled: true,
             extruded: false,
             stroked: false,
-            getHexagon: d => d.h3index,
+            getHexagon: d => {
+                return d.h3index;
+            },
             getFillColor: d => COLORSCALE(d.value).rgb(),
             getLineColor: [0, 0, 255, 255],
             lineWidthUnits: 'pixels',

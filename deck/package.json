@@ -16,6 +16,7 @@
     "@turf/bbox-polygon": "^6.5.0",
     "@turf/helpers": "^6.5.0",
     "@turf/invariant": "^6.5.0",
+    "apache-arrow": "^13.0.0",
     "chroma-js": "^2.4.2",
     "h3-js": "^4.1.0"
   },

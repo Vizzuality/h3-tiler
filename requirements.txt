@@ -4,3 +4,6 @@ h3~=4.0.0b2
 psycopg~=3.1.10
 psycopg-pool~=3.1.7
 uvicorn~=0.23.2
+
+pyarrow~=13.0.0
+connectorx~=0.3.2

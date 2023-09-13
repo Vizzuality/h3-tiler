@@ -1,26 +1,14 @@
 """Main module for the H3-Tiler API."""
 import time
-from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
-from psycopg_pool import AsyncConnectionPool
 from starlette.middleware.cors import CORSMiddleware
 from starlette.middleware.gzip import GZipMiddleware
 from starlette.requests import Request
 
-from .adapters.db import get_connection_info
 from .routers.router import h3index_router
 
-
-@asynccontextmanager
-async def lifespan(app_: FastAPI):
-    """Share a connection pool across the app."""
-    app_.async_pool = AsyncConnectionPool(conninfo=get_connection_info())
-    yield
-    await app_.async_pool.close()
-
-
-app = FastAPI(name="H3-Tiler", lifespan=lifespan)
+app = FastAPI(name="H3-Tiler")
 
 
 @app.middleware("http")
