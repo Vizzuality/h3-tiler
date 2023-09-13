@@ -178,7 +178,7 @@ export const H3TileLayer = new TileLayer({
         }
         return response.then(resp => resp.arrayBuffer()).then(buffer => {
             const table = tableFromIPC(buffer);
-            console.log(table)
+            // console.log(table.toArray())
             return table;
         });
     },
@@ -198,9 +198,10 @@ export const H3TileLayer = new TileLayer({
             extruded: false,
             stroked: false,
             getHexagon: d => {
-                return d.h3index;
+                const h3index = d.toJSON().h3index;
+                return h3index.toString(16);
             },
-            getFillColor: d => COLORSCALE(d.value).rgb(),
+            getFillColor: d => COLORSCALE(d.toJSON().value).rgb(),
             getLineColor: [0, 0, 255, 255],
             lineWidthUnits: 'pixels',
             lineWidth: 1,
