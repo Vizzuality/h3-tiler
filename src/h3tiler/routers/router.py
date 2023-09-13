@@ -1,6 +1,7 @@
 """Router for h3tiler."""
 
 import pyarrow as pa
+import pyarrow.compute
 from fastapi import APIRouter
 from starlette.responses import Response
 
@@ -17,6 +18,7 @@ h3index_router = APIRouter()
 def h3index(h3index: str) -> Response:
     """Request a tile of h3 cells from a h3index"""
     data = get_tile_from_h3index(h3index, "value", "h3_grid_deforestation_8")
+    data = data.cast(pa.schema({"h3index": pa.string(), "value": pa.float32()}))
     sink = pa.BufferOutputStream()
     with pa.RecordBatchStreamWriter(sink, data.schema) as writer:
         writer.write_table(data)

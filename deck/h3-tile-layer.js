@@ -7,6 +7,8 @@ import {GeoJsonLayer} from "@deck.gl/layers";
 import bboxPolygon from "@turf/bbox-polygon";
 
 import {tableFromIPC} from "apache-arrow";
+import {ArrowLoader} from '@loaders.gl/arrow';
+import {load} from '@loaders.gl/core';
 
 window.polygonToCells = polygonToCells;
 
@@ -78,7 +80,7 @@ class H3Tileset2D extends Tileset2D {
             cells = fillBBoxes(bounds, tileRes);
             tileRes -= 1;
         }
-        console.log("h3 resolution: " + tileRes + "\n zoom: " + opts.viewport.zoom)
+        // console.log("h3 resolution: " + tileRes + "\n zoom: " + opts.viewport.zoom)
         return cells.map(h3index => ({"h3index": h3index}));
     }
 
@@ -169,19 +171,7 @@ export const H3TileLayer = new TileLayer({
     TilesetClass: H3Tileset2D,
     id: 'tile-h3s',
     data: 'http://127.0.0.1:8000/h3index/{h3index}',
-    getTileData: (tile) => {
-        const {signal} = tile;
-        const response = fetch(tile.url, {signal});
-
-        if (signal.aborted) {
-           return null;
-        }
-        return response.then(resp => resp.arrayBuffer()).then(buffer => {
-            const table = tableFromIPC(buffer);
-            // console.log(table.toArray())
-            return table;
-        });
-    },
+    getTileData: (tile) => load(tile.url, ArrowLoader, {arrow:{shape: 'object-row-table'}}),
     minZoom: 0,
     maxZoom: 20,
     tileSize: 512,  // FIXME: tileSize does not make any sense for h3 hex tiles. Should be removed.
@@ -198,10 +188,10 @@ export const H3TileLayer = new TileLayer({
             extruded: false,
             stroked: false,
             getHexagon: d => {
-                const h3index = d.toJSON().h3index;
-                return h3index.toString(16);
+                const res = BigInt(d.h3index)
+                return res.toString(16)
             },
-            getFillColor: d => COLORSCALE(d.toJSON().value).rgb(),
+            getFillColor: d => COLORSCALE(d.value).rgb(),
             getLineColor: [0, 0, 255, 255],
             lineWidthUnits: 'pixels',
             lineWidth: 1,
