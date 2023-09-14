@@ -1,7 +1,7 @@
 """Router for h3tiler."""
 
 from fastapi import APIRouter
-from fastapi.encoders import jsonable_encoder
+from fastapi.responses import ORJSONResponse
 from starlette.requests import Request
 from starlette.responses import JSONResponse
 
@@ -15,9 +15,8 @@ h3index_router = APIRouter()
     responses={200: {"content": {"application/json": {}}, "description": "Return a tile"}},
     response_class=JSONResponse,
 )
-async def h3index(h3index: str, request: Request) -> JSONResponse:
+async def h3index(h3index: str, request: Request) -> ORJSONResponse:
     """Request a tile of h3 cells from a h3index"""
     async with request.app.async_pool.connection() as conn:
         data = await get_tile_from_h3index(h3index, "value", "h3_grid_deforestation_8", conn)
-    json_data = jsonable_encoder(data)
-    return JSONResponse(content=json_data)
+    return ORJSONResponse(content=data)

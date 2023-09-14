@@ -76,7 +76,7 @@ class H3Tileset2D extends Tileset2D {
             cells = fillBBoxes(bounds, tileRes);
             tileRes -= 1;
         }
-        console.log("h3 resolution: " + tileRes + "\n zoom: " + opts.viewport.zoom)
+        // console.log("h3 resolution: " + tileRes + "\n zoom: " + opts.viewport.zoom)
         return cells.map(h3index => ({"h3index": h3index}));
     }
 
