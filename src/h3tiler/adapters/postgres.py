@@ -23,7 +23,7 @@ def get_connection_info() -> str:
 
 async def get_tile_from_h3index(
     h3_tile_index: str, column, table, connection: AsyncConnection
-) -> str:
+) -> bytes:
     """Query and fetch the tile cells from the database"""
     h3_tile_res = h3.get_resolution(h3_tile_index)
     h3_res = min(h3_tile_res + 5, 8)
@@ -48,4 +48,6 @@ async def get_tile_from_h3index(
         # print(psycopg.ClientCursor(conn).mogrify(query))
         await cur.execute(query)
         results = cur.pgresult.get_value(0, 0)
+        if not results:
+            results = b"[]"
     return results
