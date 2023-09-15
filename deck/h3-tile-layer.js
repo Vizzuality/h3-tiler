@@ -1,9 +1,9 @@
 import {_Tileset2D as Tileset2D, H3HexagonLayer, TileLayer} from '@deck.gl/geo-layers';
-import {cellToBoundary, cellToParent, getResolution, polygonToCells} from "h3-js";
+import {cellToBoundary, cellToLatLng, cellToParent, getResolution, polygonToCells} from "h3-js";
 import bbox from "@turf/bbox";
 import {lineString} from "@turf/helpers";
 import chroma from "chroma-js";
-import {GeoJsonLayer} from "@deck.gl/layers";
+import {GeoJsonLayer, ScatterplotLayer} from "@deck.gl/layers";
 import bboxPolygon from "@turf/bbox-polygon";
 
 window.polygonToCells = polygonToCells;
@@ -171,6 +171,26 @@ export const H3TileLayer = new TileLayer({
     maxRequests: 6,  // max simultaneous requests. Set 0 for unlimited
     maxCacheSize: 300,  // max number of tiles to keep in the cache
     renderSubLayers: props => {
+        // console.log(props)
+        if (props.tile.zoom < 1) {
+            console.log("rendering scatterplot")
+            return new ScatterplotLayer({
+                id: props.id,
+                data: props.data,
+                pickable: true,
+                // radiusScale: 10,
+                // radiusMinPixels: 2,
+                // radiusMaxPixels: 10,
+                radiusUnits: 'pixels',
+                getRadius: d => 1 + (2 * Math.abs(Math.sin(cellToLatLng(Object.keys(d)[0])[0] * Math.PI / 180))),
+                getPosition: d => cellToLatLng(Object.keys(d)[0]).reverse(),
+                getFillColor: d => COLORSCALE(Object.values(d)[0]).rgb(),
+                getLineColor: [0, 0, 255, 255],
+                lineWidthUnits: 'pixels',
+                lineWidth: 1,
+            })
+        }
+        console.log("rendering H3")
         return new H3HexagonLayer({
             id: props.id,
             data: props.data,
