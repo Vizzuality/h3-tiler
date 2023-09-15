@@ -23,14 +23,14 @@ def get_connection_info() -> str:
 
 async def get_tile_from_h3index(
     h3_tile_index: str, column, table, connection: AsyncConnection
-) -> list[dict[str, float]]:
+) -> str:
     """Query and fetch the tile cells from the database"""
     h3_tile_res = h3.get_resolution(h3_tile_index)
     h3_res = min(h3_tile_res + 5, 8)
 
     query = sql.SQL(
         """
-        select h3index, {col}
+        select json_agg(json_build_object(h3index, {col}))
         from {table}
             where res={h3_res}
             and h3_cell_to_parent(h3index, {h3_tile_res}) = {h3_tile_index}
@@ -44,8 +44,8 @@ async def get_tile_from_h3index(
         h3_tile_index=sql.Literal(h3_tile_index),
     )
 
-    async with connection.cursor() as cur:
+    async with connection.cursor(binary=True) as cur:
+        # print(psycopg.ClientCursor(conn).mogrify(query))
         await cur.execute(query)
-        results = await cur.fetchall()
-        h3index_to_value = [{"h3index": h3index, "value": value} for h3index, value in results]
-    return h3index_to_value
+        results = cur.pgresult.get_value(0, 0)
+    return results
