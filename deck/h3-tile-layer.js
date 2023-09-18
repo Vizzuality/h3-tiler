@@ -12,8 +12,34 @@ const COLORSCALE = chroma.scale("viridis").domain([0, 1]);
 const TABLE = "h3_deforestation_8";
 const COLUMN = "value";
 
+
+/** Fills the viewport bbox polygon(s) with h3 cells at finner resolution to
+ * get the outline hexagons */
+function fillViewportBBoxesV2(bboxes, tileRes, maxCells) {
+    let higherResCells = [];
+    for (let bbox of bboxes) {
+        const poly = [
+            [bbox[0], bbox[1]],
+            [bbox[0], bbox[3]],
+            [bbox[2], bbox[3]],
+            [bbox[2], bbox[1]],
+            [bbox[0], bbox[1]]
+        ]
+        // 1st, generate the cells at finer resolution to get the cells that intersect the bbox
+        higherResCells = higherResCells.concat(polygonToCells(poly, tileRes + 2, true));
+    }
+    // 2nd, get the parent cells of the fine cells so that all the intersecting cells are included
+    // 3rd, remove duplicates
+    const cells = [... new Set(higherResCells.map(cell => cellToParent(cell, tileRes)))];
+    console.log(cells.length)
+    if (cells.length > maxCells && tileRes > 0) {
+        return fillViewportBBoxesV2(bboxes, tileRes - 1, maxCells);
+    }
+    return cells;
+}
+
 /** Fills the viewport bbox polygon(s) with h3 cells */
-function fillBBoxes(bboxes, z, maxCells) {
+function fillViewportBBoxes(bboxes, tileRes, maxCells) {
     let cells = [];
     for (let bbox of bboxes) {
         const poly = [
@@ -23,18 +49,16 @@ function fillBBoxes(bboxes, z, maxCells) {
             [bbox[2], bbox[1]],
             [bbox[0], bbox[1]]
         ]
-        cells = cells.concat(polygonToCells(poly, z, true));
+        cells = cells.concat(polygonToCells(poly, tileRes, true));
     }
-    if (cells.length > maxCells && z > 0) {
-        return fillBBoxes(bboxes, z - 1, maxCells);
+    if (cells.length > maxCells && tileRes > 0) {
+        return fillViewportBBoxes(bboxes, tileRes - 1, maxCells);
     }
     return cells;
 }
 
 /** Prepares the viewport bounds to be correct for filling with h3 cells */
 function prepareBounds(bounds) {
-    // Add a buffer with x % of the larger axis,
-    // so the hexagons which centroid lays out of the viewport are also included.
     // Also, we need to clamp the bounds to the world boundaries.
     const buffer = Math.max(bounds[2] - bounds[0], bounds[3] - bounds[1]) * 0.1;
     bounds[0] = Math.max(bounds[0] - buffer, -180);
@@ -74,7 +98,7 @@ class H3Tileset2D extends Tileset2D {
     getTileIndices(opts) {
         let tileRes = Math.min(Math.max(Math.floor(opts.viewport.zoom) - 3, 0), 3);
         let bounds = prepareBounds(opts.viewport.getBounds());
-        let cells = fillBBoxes(bounds, tileRes, 75);
+        let cells = fillViewportBBoxesV2(bounds, tileRes, 75);
         return cells.map(h3index => ({"h3index": h3index}));
     }
 
