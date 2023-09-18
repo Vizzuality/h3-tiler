@@ -171,9 +171,7 @@ export const H3TileLayer = new TileLayer({
     maxRequests: 6,  // max simultaneous requests. Set 0 for unlimited
     maxCacheSize: 300,  // max number of tiles to keep in the cache
     renderSubLayers: props => {
-        // console.log(props)
         if (props.tile.zoom < 1) {
-            console.log("rendering scatterplot")
             return new ScatterplotLayer({
                 id: props.id,
                 data: props.data,
@@ -190,7 +188,6 @@ export const H3TileLayer = new TileLayer({
                 lineWidth: 1,
             })
         }
-        console.log("rendering H3")
         return new H3HexagonLayer({
             id: props.id,
             data: props.data,
