@@ -11,7 +11,7 @@ window.polygonToCells = polygonToCells;
 const COLORSCALE = chroma.scale("viridis").domain([0, 130]);
 
 /** Fills the viewport bbox polygon(s) with h3 cells */
-function fillBBoxes(bboxes, z) {
+function fillBBoxes(bboxes, z, maxCells) {
     let cells = [];
     for (let bbox of bboxes) {
         const poly = [
@@ -22,6 +22,9 @@ function fillBBoxes(bboxes, z) {
             [bbox[0], bbox[1]]
         ]
         cells = cells.concat(polygonToCells(poly, z, true));
+    }
+    if (cells.length > maxCells && z > 0) {
+        return fillBBoxes(bboxes, z - 1, maxCells);
     }
     return cells;
 }
@@ -69,14 +72,7 @@ class H3Tileset2D extends Tileset2D {
     getTileIndices(opts) {
         let tileRes = Math.min(Math.max(Math.floor(opts.viewport.zoom) - 3, 0), 3);
         let bounds = prepareBounds(opts.viewport.getBounds());
-        let cells = fillBBoxes(bounds, tileRes);
-        // TODO: The resolution should be computed with a sensible algo from the viewport size,
-        //  and not fixed on the fly with a magic number to limit the number of cells.
-        while (cells.length > 50 && tileRes > 0) {
-            cells = fillBBoxes(bounds, tileRes);
-            tileRes -= 1;
-        }
-        // console.log("h3 resolution: " + tileRes + "\n zoom: " + opts.viewport.zoom)
+        let cells = fillBBoxes(bounds, tileRes, 50);
         return cells.map(h3index => ({"h3index": h3index}));
     }
 
