@@ -1,7 +1,7 @@
 """
-Database adapter for h3tiler
+Postgres database adapter for h3tiler.
 
-Here are the functions that talk to the db and return data given a h3index.
+It assumes that h3 extension is installed in the database.
 """
 
 import h3
@@ -32,7 +32,9 @@ async def get_tile_from_h3index(
         """
         select h3index, {col}
         from {table}
-            where res = {h3_res} and h3_to_parent(h3index, {h3_tile_res}) = {h3_tile_index} and {col} is not null;
+            where res={h3_res}
+            and h3_to_parent(h3index, {h3_tile_res}) = {h3_tile_index}
+            and {col} is not null;
         """
     ).format(
         h3_res=sql.Literal(h3_res),
@@ -43,7 +45,6 @@ async def get_tile_from_h3index(
     )
 
     async with connection.cursor() as cur:
-        # print(psycopg.ClientCursor(conn).mogrify(query))
         await cur.execute(query)
         results = await cur.fetchall()
         h3index_to_value = [{"h3index": h3index, "value": value} for h3index, value in results]

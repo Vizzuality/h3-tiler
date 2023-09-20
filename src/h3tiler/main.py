@@ -8,8 +8,8 @@ from starlette.middleware.cors import CORSMiddleware
 from starlette.middleware.gzip import GZipMiddleware
 from starlette.requests import Request
 
-from .adapters.db import get_connection_info
-from .routers.router import h3index_router
+from .adapters.postgres import get_connection_info
+from .routing import h3index_router
 
 
 @asynccontextmanager

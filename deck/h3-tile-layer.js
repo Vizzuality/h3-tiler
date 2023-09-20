@@ -9,6 +9,8 @@ import bboxPolygon from "@turf/bbox-polygon";
 window.polygonToCells = polygonToCells;
 
 const COLORSCALE = chroma.scale("viridis").domain([0, 130]);
+const TABLE = "h3_grid_deforestation_8";
+const COLUMN = "value";
 
 /** Fills the viewport bbox polygon(s) with h3 cells */
 function fillBBoxes(bboxes, z, maxCells) {
@@ -162,7 +164,7 @@ export const DebugH3BBoxTileLayer = new TileLayer({
 export const H3TileLayer = new TileLayer({
     TilesetClass: H3Tileset2D,
     id: 'tile-h3s',
-    data: 'http://127.0.0.1:8000/h3index/{h3index}',
+    data: `http://127.0.0.1:8000/${TABLE}/${COLUMN}/{h3index}`,
     minZoom: 0,
     maxZoom: 20,
     tileSize: 512,  // FIXME: tileSize does not make any sense for h3 hex tiles. Should be removed.
