@@ -16,15 +16,6 @@ classifiers = [
     "Topic :: Scientific/Engineering :: GIS",
 ]
 
-dependencies = [
-    "fastapi>=0.100.0",
-    "h3ronpy>=0.17",
-    "pydantic>=2.0.0",
-    "shapely>=2.0.1",
-    "mercantile>=1.2.1",
-    "psycopg>=3",
-]
-
 version = "0.1.0"
 
 [tool.black]

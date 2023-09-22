@@ -1,6 +1,27 @@
 # h3 Tiler
 
-A simple tiler for h3 hexagons.
+A simple tiler for h3 data.
+
+This repo can be considered a _reference implementation_ of what is needed to build a h3 tile system.
+
+Be warned that this repo is under heavy development and the approach of each part doesn't have to be the optimal one.
+
+It is organized in the following way:
+
+```
+├── deck                            <- The client app
+│   ├── app.js
+│   ├── h3-tile-layer.js            <- The deck.gl custom layer for h3 tiles
+│   ├── index.html
+│   └── package.json
+└── src                             <- The tiler app done in FastAPI
+    └── h3tiler
+        ├── main.py                 <- FastAPI entrypoint
+        ├── config.py               <- Settings and env stuff
+        ├── rounting.py             <- API endpoints
+        └── adapters
+            └── postgres.py         <- Adapter for getting data from a postgres database
+```
 
 ## Usage
 
@@ -16,8 +37,8 @@ then:
 npm start
 ```
 
-to spin the tiler, in `src/h3tiler`, run:
+to spin the tiler, in `src/`, run:
 
 ```bash
-python -m uvicorn app:app --reload
+python -m uvicorn h3tiler.main:app --reload
 ```
