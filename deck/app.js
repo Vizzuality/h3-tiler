@@ -31,7 +31,7 @@ const deck = new Deck({
             getFillColor: [200, 200, 200]
         }),
         H3TileLayer,
-        // DebugH3TileLayer,
+        DebugH3TileLayer,
         // DebugH3BBoxTileLayer
     ],
     getTooltip: ({ object }) => object && `h3index: ${object.h3index}`

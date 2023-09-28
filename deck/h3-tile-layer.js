@@ -9,7 +9,7 @@ import bboxPolygon from "@turf/bbox-polygon";
 window.polygonToCells = polygonToCells;
 
 const COLORSCALE = chroma.scale("viridis").domain([0, 130]);
-const TABLE = "h3_grid_deforestation_8";
+const TABLE = "h3_deforestation_8";
 const COLUMN = "value";
 
 /** Fills the viewport bbox polygon(s) with h3 cells */
