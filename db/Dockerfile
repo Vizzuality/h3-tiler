@@ -20,7 +20,8 @@ RUN cd /opt && \
 
 COPY h3-unreleased.zip /tmp/
 
-RUN pgxn install /tmp/h3-unreleased.zip
+RUN #pgxn install /tmp/h3-unreleased.zip
+RUN pgxn install h3==4.1.3
 
 COPY entrypoint.sh /usr/local/bin/
 
