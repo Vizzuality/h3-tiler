@@ -3,7 +3,6 @@ Author: Biel Stela
 
 Script to convert raster to h3 files
 """
-import time
 from math import ceil
 from pathlib import Path
 from typing import Iterator
@@ -72,6 +71,7 @@ def compute_overviews(df: pl.LazyFrame, h3res: int, agg_func: str) -> pl.LazyFra
             agg_expression = agg_expression.mean
         case _:
             raise ValueError(f"`agg_func` {agg_func} not found. Must be one of [sum, mean]")
+
     overview = (
         df.with_columns(
             pl.col("h3index").map_batches(lambda x: change_resolution(x, h3res)).alias("h3index")
@@ -133,14 +133,15 @@ def main(
     # df = df.with_columns(pl.col("h3index").map_elements(lambda x: hex(x)[2:]))
     # reorder columns to be "index like" h3index -> value.
     df = df.select([pl.col("h3index"), pl.col("value")])
-    time.sleep(5)
     if last_overview:
         overview_resolutions = list(range(h3res - 1, last_overview - 1, -1))
-        for overview_res in overview_resolutions:
+        overviews = [df]
+        for _i, overview_res in enumerate(overview_resolutions):
             click.echo(f"Building overview {overview_res}...")
-            overview = compute_overviews(df, overview_res, agg)
-            overview.sink_csv(output_file.with_name(f"{output_file.stem}_{overview_res}.csv"))
-    df.sink_csv(output_file)
+            overviews.append(compute_overviews(overviews[-1], overview_res, agg))
+            # overview.sink_csv(output_file.with_name(f"{output_file.stem}_{overview_res}.csv"))
+        df = pl.concat(overviews)
+    df.collect().write_csv(output_file)
 
 
 if __name__ == "__main__":
