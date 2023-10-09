@@ -1,0 +1,42 @@
+version: "3.8"
+services:
+
+  h3-tiler:
+    build:
+      context: .
+    container_name: h3-tiler
+    env_file: .env
+    ports:
+      - ${H3_TILER_PORT}:8000
+    depends_on:
+      - h3-postgresql
+    restart: on-failure
+
+#  client:
+#    build:
+#      context: deck
+#    container_name: h3-client
+#    env_file: .env
+#    ports:
+#      - ${CLIENT_PORT}:5173
+#    depends_on:
+#      - h3-tiler
+#    restart: on-failure
+
+  h3-postgresql:
+    build:
+      context: db
+    container_name: h3-postgresql
+    env_file: .env
+    ports:
+      - ${POSTGRES_PORT}:5432
+    volumes:
+      - h3-postgresql:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_USER=${POSTGRES_USERNAME}
+      - POSTGRES_DB=${POSTGRES_DB}
+    restart: on-failure
+
+volumes:
+  h3-postgresql:
