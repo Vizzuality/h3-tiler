@@ -8,7 +8,7 @@ import bboxPolygon from "@turf/bbox-polygon";
 
 window.polygonToCells = polygonToCells;
 
-const COLORSCALE = chroma.scale("viridis").domain([0, 130]);
+const COLORSCALE = chroma.scale("viridis").domain([0, 1]);
 const TABLE = "h3_deforestation_8";
 const COLUMN = "value";
 
@@ -74,7 +74,7 @@ class H3Tileset2D extends Tileset2D {
     getTileIndices(opts) {
         let tileRes = Math.min(Math.max(Math.floor(opts.viewport.zoom) - 3, 0), 3);
         let bounds = prepareBounds(opts.viewport.getBounds());
-        let cells = fillBBoxes(bounds, tileRes, 50);
+        let cells = fillBBoxes(bounds, tileRes, 75);
         return cells.map(h3index => ({"h3index": h3index}));
     }
 
@@ -167,25 +167,20 @@ export const H3TileLayer = new TileLayer({
     data: `http://127.0.0.1:8000/${TABLE}/${COLUMN}/{h3index}`,
     minZoom: 0,
     maxZoom: 20,
-    tileSize: 512,  // FIXME: tileSize does not make any sense for h3 hex tiles. Should be removed.
     maxRequests: 6,  // max simultaneous requests. Set 0 for unlimited
     maxCacheSize: 300,  // max number of tiles to keep in the cache
     renderSubLayers: props => {
+        // For zoom < 1 (~whole world view), render a scatterplot layer instead of the hexagon layer
+        // It is faster to render points than hexagons (is it?) when there are many cells.
         if (props.tile.zoom < 1) {
             return new ScatterplotLayer({
                 id: props.id,
                 data: props.data,
                 pickable: true,
-                // radiusScale: 10,
-                // radiusMinPixels: 2,
-                // radiusMaxPixels: 10,
-                radiusUnits: 'pixels',
-                getRadius: d => 1 + (2 * Math.abs(Math.sin(cellToLatLng(Object.keys(d)[0])[0] * Math.PI / 180))),
+                radiusUnits: 'meters',
+                getRadius: 9854,  // is the radius of a h3 cell at resolution 5 in meters
                 getPosition: d => cellToLatLng(Object.keys(d)[0]).reverse(),
                 getFillColor: d => COLORSCALE(Object.values(d)[0]).rgb(),
-                getLineColor: [0, 0, 255, 255],
-                lineWidthUnits: 'pixels',
-                lineWidth: 1,
             })
         }
         return new H3HexagonLayer({
@@ -199,9 +194,6 @@ export const H3TileLayer = new TileLayer({
             stroked: false,
             getHexagon: d => Object.keys(d)[0],
             getFillColor: d => COLORSCALE(Object.values(d)[0]).rgb(),
-            getLineColor: [0, 0, 255, 255],
-            lineWidthUnits: 'pixels',
-            lineWidth: 1,
         });
     }
 })
