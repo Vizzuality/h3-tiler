@@ -1,14 +1,14 @@
 import {_Tileset2D as Tileset2D, H3HexagonLayer, TileLayer} from '@deck.gl/geo-layers';
-import {cellToBoundary, cellToParent, getResolution, polygonToCells} from "h3-js";
+import {cellToBoundary, cellToLatLng, cellToParent, getResolution, polygonToCells} from "h3-js";
 import bbox from "@turf/bbox";
 import {lineString} from "@turf/helpers";
 import chroma from "chroma-js";
-import {GeoJsonLayer} from "@deck.gl/layers";
+import {GeoJsonLayer, ScatterplotLayer} from "@deck.gl/layers";
 import bboxPolygon from "@turf/bbox-polygon";
 
 window.polygonToCells = polygonToCells;
 
-const COLORSCALE = chroma.scale("viridis").domain([0, 130]);
+const COLORSCALE = chroma.scale("viridis").domain([0, 1]);
 const TABLE = "h3_deforestation_8";
 const COLUMN = "value";
 
@@ -74,7 +74,7 @@ class H3Tileset2D extends Tileset2D {
     getTileIndices(opts) {
         let tileRes = Math.min(Math.max(Math.floor(opts.viewport.zoom) - 3, 0), 3);
         let bounds = prepareBounds(opts.viewport.getBounds());
-        let cells = fillBBoxes(bounds, tileRes, 50);
+        let cells = fillBBoxes(bounds, tileRes, 75);
         return cells.map(h3index => ({"h3index": h3index}));
     }
 
@@ -167,10 +167,22 @@ export const H3TileLayer = new TileLayer({
     data: `http://127.0.0.1:8000/${TABLE}/${COLUMN}/{h3index}`,
     minZoom: 0,
     maxZoom: 20,
-    tileSize: 512,  // FIXME: tileSize does not make any sense for h3 hex tiles. Should be removed.
     maxRequests: 6,  // max simultaneous requests. Set 0 for unlimited
     maxCacheSize: 300,  // max number of tiles to keep in the cache
     renderSubLayers: props => {
+        // For zoom < 1 (~whole world view), render a scatterplot layer instead of the hexagon layer
+        // It is faster to render points than hexagons (is it?) when there are many cells.
+        if (props.tile.zoom < 1) {
+            return new ScatterplotLayer({
+                id: props.id,
+                data: props.data,
+                pickable: true,
+                radiusUnits: 'meters',
+                getRadius: 9854,  // is the radius of a h3 cell at resolution 5 in meters
+                getPosition: d => cellToLatLng(Object.keys(d)[0]).reverse(),
+                getFillColor: d => COLORSCALE(Object.values(d)[0]).rgb(),
+            })
+        }
         return new H3HexagonLayer({
             id: props.id,
             data: props.data,
@@ -180,11 +192,8 @@ export const H3TileLayer = new TileLayer({
             filled: true,
             extruded: false,
             stroked: false,
-            getHexagon: d => d.h3index,
-            getFillColor: d => COLORSCALE(d.value).rgb(),
-            getLineColor: [0, 0, 255, 255],
-            lineWidthUnits: 'pixels',
-            lineWidth: 1,
+            getHexagon: d => Object.keys(d)[0],
+            getFillColor: d => COLORSCALE(Object.values(d)[0]).rgb(),
         });
     }
 })
