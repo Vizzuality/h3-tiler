@@ -12,16 +12,16 @@ services:
       - h3-postgresql
     restart: on-failure
 
-#  client:
-#    build:
-#      context: deck
-#    container_name: h3-client
-#    env_file: .env
-#    ports:
-#      - ${CLIENT_PORT}:5173
-#    depends_on:
-#      - h3-tiler
-#    restart: on-failure
+  client:
+    build:
+      context: deck
+    container_name: h3-client
+    env_file: .env
+    ports:
+      - ${CLIENT_PORT}:5173
+    depends_on:
+      - h3-tiler
+    restart: on-failure
 
   h3-postgresql:
     build:
