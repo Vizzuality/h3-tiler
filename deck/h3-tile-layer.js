@@ -1,5 +1,14 @@
 import {_Tileset2D as Tileset2D, H3HexagonLayer, TileLayer} from '@deck.gl/geo-layers';
-import {cellToBoundary, cellToLatLng, cellToParent, getResolution, polygonToCells} from "h3-js";
+import {
+    cellToBoundary,
+    cellToLatLng,
+    cellToParent,
+    edgeLength,
+    getResolution,
+    latLngToCell,
+    originToDirectedEdges,
+    polygonToCells,
+} from "h3-js";
 import bbox from "@turf/bbox";
 import {lineString} from "@turf/helpers";
 import chroma from "chroma-js";
@@ -13,33 +22,8 @@ const TABLE = "h3_deforestation_8";
 const COLUMN = "value";
 
 
-/** Fills the viewport bbox polygon(s) with h3 cells at finner resolution to
- * get the outline hexagons */
-function fillViewportBBoxesV2(bboxes, tileRes, maxCells) {
-    let higherResCells = [];
-    for (let bbox of bboxes) {
-        const poly = [
-            [bbox[0], bbox[1]],
-            [bbox[0], bbox[3]],
-            [bbox[2], bbox[3]],
-            [bbox[2], bbox[1]],
-            [bbox[0], bbox[1]]
-        ]
-        // 1st, generate the cells at finer resolution to get the cells that intersect the bbox
-        higherResCells = higherResCells.concat(polygonToCells(poly, tileRes + 2, true));
-    }
-    // 2nd, get the parent cells of the fine cells so that all the intersecting cells are included
-    // 3rd, remove duplicates
-    const cells = [... new Set(higherResCells.map(cell => cellToParent(cell, tileRes)))];
-    console.log(cells.length)
-    if (cells.length > maxCells && tileRes > 0) {
-        return fillViewportBBoxesV2(bboxes, tileRes - 1, maxCells);
-    }
-    return cells;
-}
-
 /** Fills the viewport bbox polygon(s) with h3 cells */
-function fillViewportBBoxes(bboxes, tileRes, maxCells) {
+function fillViewportBBoxes(bboxes, tileRes) {
     let cells = [];
     for (let bbox of bboxes) {
         const poly = [
@@ -51,20 +35,27 @@ function fillViewportBBoxes(bboxes, tileRes, maxCells) {
         ]
         cells = cells.concat(polygonToCells(poly, tileRes, true));
     }
-    if (cells.length > maxCells && tileRes > 0) {
-        return fillViewportBBoxes(bboxes, tileRes - 1, maxCells);
-    }
     return cells;
 }
 
-/** Prepares the viewport bounds to be correct for filling with h3 cells */
-function prepareBounds(bounds) {
-    // Also, we need to clamp the bounds to the world boundaries.
-    const buffer = Math.max(bounds[2] - bounds[0], bounds[3] - bounds[1]) * 0.1;
-    bounds[0] = Math.max(bounds[0] - buffer, -180);
-    bounds[1] = Math.max(bounds[1] - buffer, -90);
-    bounds[2] = Math.min(bounds[2] + buffer, 180);
-    bounds[3] = Math.min(bounds[3] + buffer, 90);
+
+/** Splits viewport bounds into two if span is > 180 and adds buffer to include border hexagons.
+ * Also clamps viewport bounds to the world bounds [-+180, -+90], which maybe backfires if used in GlobeView
+ * */
+function makeBufferedBounds(bounds, tileRes) {
+
+    // getHexagonEdgeLengthAvg for a given resolution doesn't have "rads"
+    // as a unit option, even that the docs say it does >:(.
+    // So will use random edge from the central cell as an edge length proxy since it doesn't need to be exact.
+    const medLat = (bounds[1] + bounds[3]) / 2;
+    const medLng = (bounds[0] + bounds[2]) / 2;
+    const centroidCellEdges = originToDirectedEdges(latLngToCell(medLat, medLng, tileRes))
+    // largest edge from the center cell of the viewport
+    const buffer = Math.max(...centroidCellEdges.map(x => edgeLength(x, "rads"))) * 180 / Math.PI;
+    bounds[0] = Math.max(bounds[0] - buffer, -180);     // min X
+    bounds[1] = Math.max(bounds[1] - buffer, -90);      // min Y
+    bounds[2] = Math.min(bounds[2] + buffer, 180);      // max X
+    bounds[3] = Math.min(bounds[3] + buffer, 90);       // max Y
     // polygons spanning more than 180 degrees need to be split in two parts to be correctly covered by h3
     // https://github.com/uber/h3-js/issues/180#issuecomment-1652453683
     // So split the bounds in two parts
@@ -96,9 +87,9 @@ class H3Tileset2D extends Tileset2D {
      * it decreases the resolution until the number of cells is below a threshold.
      * */
     getTileIndices(opts) {
-        let tileRes = Math.min(Math.max(Math.floor(opts.viewport.zoom) - 3, 0), 3);
-        let bounds = prepareBounds(opts.viewport.getBounds());
-        let cells = fillViewportBBoxesV2(bounds, tileRes, 75);
+        let tileRes = Math.min(Math.max(Math.floor((opts.viewport.zoom / 2) - 1), 0), 3);
+        let bufferedBounds = makeBufferedBounds(opts.viewport.getBounds(), tileRes);
+        let cells = fillViewportBBoxes(bufferedBounds, tileRes);
         return cells.map(h3index => ({"h3index": h3index}));
     }
 
@@ -145,13 +136,13 @@ export const DebugH3TileLayer = new TileLayer({
             id: props.id,
             data: props.data,
             highPrecision: 'auto',
-            pickable: true,
+            pickable: false,
             wireframe: true,
             filled: true,
             extruded: false,
             stroked: true,
             getHexagon: d => d.h3index,
-            getFillColor: d => [0, 0, 255, 0],
+            getFillColor: [0, 0, 255, 0],
             getLineColor: [0, 0, 255, 255],
             lineWidthUnits: 'pixels',
             getLineWidth: 2
