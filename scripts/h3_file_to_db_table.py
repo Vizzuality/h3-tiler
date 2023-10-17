@@ -39,6 +39,9 @@ def main(input_file: str, table_name: str, no_hex: bool, no_res_column: bool, bu
     df = pd.read_csv(input_file)
     if not no_hex:
         click.echo("Converting h3index column to hex string...")
+        # Convert to hex string, needed in h3-pg functions.
+        # This is slow af but currently there's no way to format natively
+        # in polars: https://github.com/pola-rs/polars/issues/7133
         df["h3index"] = df["h3index"].apply(lambda x: hex(x)[2:])
     if not no_res_column:
         click.echo("Adding res column...")
@@ -77,7 +80,7 @@ def main(input_file: str, table_name: str, no_hex: bool, no_res_column: bool, bu
 
         if build_index:
             click.echo("Building indexes...")
-            click.echo("Building index BRIN(res)...")
+            click.echo("Building index for res column...")
             with conn.cursor() as cur:
                 cur.execute(
                     sql.SQL("CREATE INDEX res_idx ON {} USING BRIN(res);").format(
