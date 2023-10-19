@@ -1,4 +1,9 @@
-import {_Tileset2D as Tileset2D, H3HexagonLayer, TileLayer} from '@deck.gl/geo-layers';
+import { H3HexagonLayer, TileLayer, _Tileset2D as Tileset2D } from '@deck.gl/geo-layers';
+import { GeoJsonLayer, ScatterplotLayer } from "@deck.gl/layers";
+import bbox from "@turf/bbox";
+import bboxPolygon from "@turf/bbox-polygon";
+import { lineString } from "@turf/helpers";
+import chroma from "chroma-js";
 import {
     cellToBoundary,
     cellToLatLng,
@@ -9,16 +14,11 @@ import {
     originToDirectedEdges,
     polygonToCells,
 } from "h3-js";
-import bbox from "@turf/bbox";
-import {lineString} from "@turf/helpers";
-import chroma from "chroma-js";
-import {GeoJsonLayer, ScatterplotLayer} from "@deck.gl/layers";
-import bboxPolygon from "@turf/bbox-polygon";
 
 window.polygonToCells = polygonToCells;
 
-const COLORSCALE = chroma.scale("viridis").domain([0, 1]);
-const TABLE = "h3_deforestation_8";
+let COLORSCALE = chroma.scale("viridis").domain([0, 1]);
+const TABLE = "h3_demo";
 const COLUMN = "value";
 
 
@@ -87,7 +87,7 @@ class H3Tileset2D extends Tileset2D {
      * it decreases the resolution until the number of cells is below a threshold.
      * */
     getTileIndices(opts) {
-        let tileRes = Math.min(Math.max(Math.floor((opts.viewport.zoom / 2) - 1), 0), 3);
+        let tileRes = Math.max(Math.floor((opts.viewport.zoom / 1.7) - 1), 0);
         let bufferedBounds = makeBufferedBounds(opts.viewport.getBounds(), tileRes);
         let cells = fillViewportBBoxes(bufferedBounds, tileRes);
         return cells.map(h3index => ({"h3index": h3index}));
@@ -175,14 +175,13 @@ export const DebugH3BBoxTileLayer = new TileLayer({
     }
 })
 
-
 export const H3TileLayer = new TileLayer({
     TilesetClass: H3Tileset2D,
     id: 'tile-h3s',
     data: `http://127.0.0.1:8000/${TABLE}/${COLUMN}/{h3index}`,
     minZoom: 0,
     maxZoom: 20,
-    maxRequests: 6,  // max simultaneous requests. Set 0 for unlimited
+    maxRequests: 10,  // max simultaneous requests. Set 0 for unlimited
     maxCacheSize: 300,  // max number of tiles to keep in the cache
     renderSubLayers: props => {
         // For zoom < 1 (~whole world view), render a scatterplot layer instead of the hexagon layer
