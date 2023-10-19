@@ -136,7 +136,7 @@ def raster_to_h3_windowed(
             df.to_csv(out_file, mode="a", index=False, header=False)
 
 
-def aggregate_cells(df: pl.DataFrame, h3res: int, agg_func: str) -> pl.LazyFrame:
+def aggregate_cells(df: pl.LazyFrame, h3res: int, agg_func: str) -> pl.LazyFrame:
     """Computes h3 aggregation of `df` at `h3res`.
     Returns columns in the order h3index, value.
     """
@@ -186,7 +186,7 @@ def build_overviews_by_level(base_overview_file: Path, agg: str, h3res: int, las
             base_overview_file.parent / f"{base_overview_file.stem}_{overview_res + 1}.csv"
         )
         df = aggregate_cells(
-            pl.read_csv(
+            pl.scan_csv(
                 # use the base resolution file in the first iteration.
                 previous_overview if i > 0 else base_overview_file,
                 new_columns=["h3index", "value"],
