@@ -104,14 +104,19 @@ def chunk_generator(splits: int, height: int, width: int) -> Iterator[Window]:
 
 
 def raster_to_h3_windowed(
-    input_file: Path, out_file, splits: int, compact: bool, h3res: int, user_nodata: Optional[int]
+    input_file: Path,
+    out_file: Path,
+    splits: int,
+    compact: bool,
+    h3res: int,
+    user_nodata: Optional[int],
 ):
     """Convert a raster to LazyFrame of h3 cell -> value pairs.
 
     Since the function used (h3ronpy's raster_to_dataframe) is fully parallel, a large raster
     can fill all the memory easily. This iterates the raster by smaller blocks and writes them to disk.
     """
-    out_file.unlink()
+    out_file.unlink(missing_ok=True)
     with rio.open(input_file) as src:
         click.echo(f"Will process {splits**2} blocks.")
         for ji, window in chunk_generator(splits, src.height, src.width):
