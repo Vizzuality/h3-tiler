@@ -4,7 +4,7 @@ from fastapi import APIRouter
 from starlette.requests import Request
 from starlette.responses import JSONResponse, Response
 
-from .adapters.postgres import get_h3_tables, get_tile_from_h3index
+from .adapters.postgres import get_h3_table_columns, get_h3_tables, get_tile_from_h3index
 
 h3index_router = APIRouter()
 
@@ -30,4 +30,16 @@ async def get_list_tables(request: Request) -> JSONResponse:
     """Request a tile of h3 cells from a h3index"""
     async with request.app.async_pool.connection() as conn:
         data = await get_h3_tables(conn)
+    return JSONResponse(data, media_type="application/json")
+
+
+@h3index_router.get(
+    "/{table}",
+    responses={200: {"content": {"application/json": {}}, "description": "get list of tables"}},
+    response_class=JSONResponse,
+)
+async def get_tables_columns(table: str, request: Request) -> JSONResponse:
+    """Request a tile of h3 cells from a h3index"""
+    async with request.app.async_pool.connection() as conn:
+        data = await get_h3_table_columns(table, conn)
     return JSONResponse(data, media_type="application/json")
