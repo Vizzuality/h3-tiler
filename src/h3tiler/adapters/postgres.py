@@ -51,3 +51,17 @@ async def get_tile_from_h3index(
         if not results:
             results = b"[]"
     return results
+
+
+async def get_h3_tables(conn: AsyncConnection) -> list:
+    """returns a list of tables that have h3 indexes"""
+    async with conn.cursor() as cur:
+        await cur.execute(
+            """
+            select table_name
+            from information_schema.columns
+            where column_name = 'h3index'
+            """
+        )
+        results = [r[0] for r in await cur.fetchall()]
+    return results
