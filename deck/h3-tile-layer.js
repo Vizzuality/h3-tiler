@@ -17,8 +17,8 @@ import {
 
 window.polygonToCells = polygonToCells;
 
-let COLORSCALE = chroma.scale("viridis").domain([0, 1]);
-const TABLE = "h3_demo";
+const COLORSCALE = chroma.scale("viridis").domain([0, 1]);
+const TABLE = "h3_loss2020_12";
 const COLUMN = "value";
 
 
