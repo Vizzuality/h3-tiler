@@ -18,13 +18,9 @@ classifiers = [
 
 version = "0.1.0"
 
-[tool.black]
-line-length = 100
-
-[tool.isort]
-profile = "black"
-
 [tool.ruff]
+
+line-length = 100
 select = [
     "D1",   # pydocstyle errors
     "E",    # pycodestyle errors
