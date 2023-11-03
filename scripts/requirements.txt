@@ -4,4 +4,4 @@ tqdm~=4.66.1
 polars~=0.19.1
 h3~=4.0.0b2
 psycopg~=3.1.10
-h3ronpy~=0.17.5
+h3ronpy~=0.19
