@@ -1,13 +1,26 @@
 <!doctype html>
 <html lang="en">
-<head>
-  <meta charset="utf-8">
-  <title>deck.gl Example</title>
-  <style>
-    body {margin: 0; width: 100vw; height: 100vh; overflow: hidden;}
-  </style>
-</head>
-<body>
-</body>
-<script type="module" src="app.js"></script>
+  <head>
+    <meta charset="utf-8" />
+    <title>deck.gl Example</title>
+    <style>
+      body {
+        margin: 0;
+        width: 100vw;
+        height: 100vh;
+        overflow: hidden;
+      }
+    </style>
+  </head>
+  <body>
+    <select id="tableSelect">
+      <option value="h3_loss2020_12" selected>h3_loss2020_12</option>
+      <option value="h3_demo">h3_demo</option>
+    </select>
+    <select id="columnSelect">
+      <option value="value" selected>value</option>
+      <option value="other">other</option>
+    </select>
+  </body>
+  <script type="module" src="app.js"></script>
 </html>
