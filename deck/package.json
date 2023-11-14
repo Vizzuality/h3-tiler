@@ -12,12 +12,14 @@
     "@deck.gl/core": "^8.8.0",
     "@deck.gl/geo-layers": "^8.9.19",
     "@deck.gl/layers": "^8.8.0",
+    "@deck.gl/mapbox": "^8.9.32",
     "@turf/bbox": "^6.5.0",
     "@turf/bbox-polygon": "^6.5.0",
     "@turf/helpers": "^6.5.0",
     "@turf/invariant": "^6.5.0",
     "chroma-js": "^2.4.2",
-    "h3-js": "^4.1.0"
+    "h3-js": "^4.1.0",
+    "maplibre-gl": "^3.5.2"
   },
   "devDependencies": {
     "vite": "^4.0.0"

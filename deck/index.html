@@ -10,11 +10,32 @@
         height: 100vh;
         overflow: hidden;
       }
+
+      #map {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+      }
+
+      #selectors {
+        position: absolute;
+        top: 10px;
+        left: 10px;
+        z-index: 1;
+      }
     </style>
   </head>
+
   <body>
-    <select id="tableSelect"></select>
-    <select id="columnSelect"></select>
+    <div id="selectors">
+      <label for="tableSelect"></label
+      ><select id="tableSelect"></select>
+      <label for="columnSelect"></label
+      ><select id="columnSelect"></select>
+    </div>
+    <div id="map"></div>
   </body>
   <script type="module" src="app.js"></script>
 </html>

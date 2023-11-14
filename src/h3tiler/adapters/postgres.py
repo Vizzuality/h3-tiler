@@ -74,7 +74,7 @@ async def get_h3_table_columns(table: str, conn: AsyncConnection) -> list:
             """
             select column_name
             from information_schema.columns
-            where table_name = %s
+            where table_name = %s and column_name != 'h3index'
             """,
             (table,),
         )
