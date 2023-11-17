@@ -90,6 +90,28 @@ class H3Tileset2D extends Tileset2D {
    * */
   getTileIndices(opts) {
     let tileRes = Math.max(Math.floor(opts.viewport.zoom / 1.7 - 1), 0);
+
+    if (
+      typeof opts.minZoom === "number" &&
+      Number.isFinite(opts.minZoom) &&
+      tileRes < opts.minZoom
+    ) {
+      if (!opts.extent) {
+        return [];
+      }
+
+      tileRes = opts.minZoom;
+    }
+
+    if (
+      typeof opts.maxZoom === "number" &&
+      Number.isFinite(opts.maxZoom) &&
+      tileRes > opts.maxZoom
+    ) {
+      tileRes = opts.maxZoom;
+    }
+    console.log("tileRes, maxZoom", tileRes, opts.maxZoom);
+
     let bufferedBounds = makeBufferedBounds(opts.viewport.getBounds(), tileRes);
     let cells = fillViewportBBoxes(bufferedBounds, tileRes);
     return cells.map((h3index) => ({ h3index: h3index }));
@@ -137,7 +159,7 @@ export const DebugH3TileLayer = new TileLayer({
     return [tile.index];
   },
   minZoom: 0,
-  maxZoom: 20,
+  maxZoom: 4,
   renderSubLayers: (props) => {
     // console.log(props)
     return new H3HexagonLayer({
@@ -185,13 +207,13 @@ export const DebugH3BBoxTileLayer = new TileLayer({
   },
 });
 
-export function createH3TileLayer(TABLE = "", COLUMN = "value") {
+export function createH3TileLayer(table = "", column = "value", maxZoom = 12) {
   return new TileLayer({
     TilesetClass: H3Tileset2D,
     id: "tile-h3s",
-    data: `http://127.0.0.1:8000/${TABLE}/${COLUMN}/{h3index}`,
+    data: `http://127.0.0.1:8000/${table}/${column}/{h3index}`,
     minZoom: 0,
-    maxZoom: 20,
+    maxZoom: 3,
     maxRequests: 10, // max simultaneous requests. Set 0 for unlimited
     maxCacheSize: 300, // max number of tiles to keep in the cache
     renderSubLayers: (props) => {
