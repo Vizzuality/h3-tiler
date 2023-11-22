@@ -11,14 +11,14 @@ The important parts are:
 ```
 ├── deck                            <- The client app
 │   ├── app.js
-│   ├── h3-tile-layer.js            <- The deck.gl custom layer for h3 tiles
+│   ├── h3tile-layer.js            <- The deck.gl custom layer for h3 tiles
 │   ├── index.html
 │   └── package.json
 ├── src                             <- The tiler app done in FastAPI
 │   └── h3tiler
 │       ├── main.py                 <- FastAPI entrypoint
 │       ├── config.py               <- Settings and env stuff
-│       ├── rounting.py             <- API endpoints
+│       ├── routing.py             <- API endpoints
 │       └── adapters
 │           └── postgres.py         <- Adapter for getting data from a postgres database
 ├── db
@@ -37,6 +37,7 @@ The important parts are:
 ## Usage
 
 ### Docker
+
 just do
 
 ```bash

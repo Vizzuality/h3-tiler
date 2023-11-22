@@ -1,6 +1,5 @@
 version: "3.8"
 services:
-
   h3-tiler:
     build:
       context: .
@@ -14,7 +13,7 @@ services:
 
   client:
     build:
-      context: deck
+      context: h3tile-layer
     container_name: h3-client
     env_file: .env
     ports:
