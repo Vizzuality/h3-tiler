@@ -17,56 +17,66 @@ const INITIAL_VIEW_STATE = {
   pitch: 0,
   bearing: 0,
 };
-const COLORSCALE = scaleSequential()
-  .domain([0, 1])
-  .interpolator(interpolateViridis);
+// const COLORSCALE = scaleSequential()
+//   .domain([0, 1])
+//   .interpolator(interpolateViridis);
 
 const mapStyle =
   "https://basemaps.cartocdn.com/gl/positron-nolabels-gl-style/style.json";
 
-export function H3Map() {
-  const layers = [
-    new H3TileLayer({
-      data: `http://127.0.0.1:8000/h3_lossyear_area/value/{h3index}`,
-      minZoom: 0,
-      maxZoom: 6,
-      maxRequests: 10, // max simultaneous requests. Set 0 for unlimited
-      maxCacheSize: 300, // max number of tiles to keep in the cache
-      renderSubLayers: (props) => {
-        // For zoom < 1 (~whole world view), render a scatterplot layer instead of the hexagon layer
-        // It is faster to render points than hexagons (is it?) when there are many cells.
-        if (props.tile.zoom < 1) {
-          return new ScatterplotLayer({
+export function H3Map({ selectedLayer }) {
+  let layers = [];
+
+  if (selectedLayer) {
+    const colorscale = scaleSequential()
+      .domain([selectedLayer.min_value, selectedLayer.max_value])
+      .interpolator(interpolateViridis);
+
+    const maxZoom = selectedLayer.max_res - 5;
+    const dataUrl = `http://127.0.0.1:8000/${selectedLayer.h3_table_name}/${selectedLayer.column_name}/{h3index}`;
+    layers = [
+      new H3TileLayer({
+        data: dataUrl,
+        minZoom: 0,
+        maxZoom: maxZoom,
+        maxRequests: 10, // max simultaneous requests. Set 0 for unlimited
+        maxCacheSize: 300, // max number of tiles to keep in the cache
+        renderSubLayers: (props) => {
+          // For zoom < 1 (~whole world view), render a scatterplot layer instead of the hexagon layer
+          // It is faster to render points than hexagons (is it?) when there are many cells.
+          if (props.tile.zoom < 1) {
+            return new ScatterplotLayer({
+              id: props.id,
+              data: props.data,
+              pickable: true,
+              radiusUnits: "meters",
+              getRadius: 9854, // is the radius of a h3 cell at resolution 5 in meters
+              getPosition: (d) => cellToLatLng(Object.keys(d)[0]).reverse(),
+              getFillColor: (d) => {
+                let c = color(colorscale(Object.values(d)[0])).rgb();
+                return [c.r, c.g, c.b];
+              },
+            });
+          }
+          return new H3HexagonLayer({
             id: props.id,
             data: props.data,
+            highPrecision: "auto",
             pickable: true,
-            radiusUnits: "meters",
-            getRadius: 9854, // is the radius of a h3 cell at resolution 5 in meters
-            getPosition: (d) => cellToLatLng(Object.keys(d)[0]).reverse(),
+            wireframe: false,
+            filled: true,
+            extruded: false,
+            stroked: false,
+            getHexagon: (d) => Object.keys(d)[0],
             getFillColor: (d) => {
-              let c = color(COLORSCALE(Object.values(d)[0])).rgb();
+              let c = color(colorscale(Object.values(d)[0])).rgb();
               return [c.r, c.g, c.b];
             },
           });
-        }
-        return new H3HexagonLayer({
-          id: props.id,
-          data: props.data,
-          highPrecision: "auto",
-          pickable: true,
-          wireframe: false,
-          filled: true,
-          extruded: false,
-          stroked: false,
-          getHexagon: (d) => Object.keys(d)[0],
-          getFillColor: (d) => {
-            let c = color(COLORSCALE(Object.values(d)[0])).rgb();
-            return [c.r, c.g, c.b];
-          },
-        });
-      },
-    }),
-  ];
+        },
+      }),
+    ];
+  }
 
   return (
     <DeckGL

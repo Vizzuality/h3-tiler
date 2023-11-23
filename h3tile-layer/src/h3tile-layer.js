@@ -104,8 +104,6 @@ export class H3Tileset2D extends Tileset2D {
     ) {
       tileRes = opts.maxZoom;
     }
-    console.log("tileRes, maxZoom", tileRes, opts.maxZoom);
-
     let bufferedBounds = makeBufferedBounds(opts.viewport.getBounds(), tileRes);
     let cells = fillViewportBBoxes(bufferedBounds, tileRes);
     return cells.map((h3index) => ({ h3index: h3index }));
@@ -155,7 +153,6 @@ export const DebugH3TileLayer = new TileLayer({
   minZoom: 0,
   maxZoom: 4,
   renderSubLayers: (props) => {
-    // console.log(props)
     return new H3HexagonLayer({
       id: props.id,
       data: props.data,

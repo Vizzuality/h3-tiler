@@ -1,77 +1,72 @@
-import { BellRing, Check } from "lucide-react";
-
 import { cn } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
   CardDescription,
-  CardFooter,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
-import React from "react";
+import React, { useEffect, useState } from "react";
 
-const notifications = [
-  {
-    title: "Your call has been confirmed.",
-    description: "1 hour ago",
-  },
-  {
-    title: "You have a new message!",
-    description: "1 hour ago",
-  },
-  {
-    title: "Your subscription is expiring soon!",
-    description: "2 hours ago",
-  },
-];
+export function LayerSelect({
+  className,
+  selectedLayer,
+  setSelectedLayer,
+  ...props
+}) {
+  const [layers, setLayers] = useState([]);
 
-export function CardDemo({ className, ...props }) {
+  useEffect(() => {
+    fetch("http://localhost:8000/meta")
+      .then((response) => response.json())
+      .then((data) => {
+        // setLayers(data.map((layer, i) => {
+        //   return { ...layer, selected: i === 0 }
+        // }))
+        setLayers(data);
+      });
+  }, []);
+
+  const handleSwitchChange = (layer) => {
+    const updatedLayers = layers.map((l) => {
+      if (l === layer) {
+        return { ...l, selected: true };
+      } else {
+        return { ...l, selected: false };
+      }
+    });
+    setLayers(updatedLayers);
+    setSelectedLayer(layer);
+  };
+
   return (
     <Card className={cn("w-[380px]", className)} {...props}>
       <CardHeader>
-        <CardTitle>Notifications</CardTitle>
-        <CardDescription>You have 3 unread messages.</CardDescription>
+        <CardTitle>H3 tile layers</CardTitle>
+        <CardDescription>Select layer to show</CardDescription>
       </CardHeader>
       <CardContent className="grid gap-4">
-        <div className=" flex items-center space-x-4 rounded-md border p-4">
-          <BellRing />
-          <div className="flex-1 space-y-1">
-            <p className="text-sm font-medium leading-none">
-              Push Notifications
-            </p>
-            <p className="text-sm text-muted-foreground">
-              Send notifications to device.
-            </p>
-          </div>
-          <Switch />
-        </div>
         <div>
-          {notifications.map((notification, index) => (
+          {layers.map((layer, index) => (
             <div
               key={index}
-              className="mb-4 grid grid-cols-[25px_1fr] items-start pb-4 last:mb-0 last:pb-0"
+              className=" flex items-center justify-between space-x-10 p-4"
             >
-              <span className="flex h-2 w-2 translate-y-1 rounded-full bg-sky-500" />
               <div className="space-y-1">
-                <p className="text-sm font-medium leading-none">
-                  {notification.title}
-                </p>
+                <p className="text-sm font-medium leading-none">{layer.name}</p>
                 <p className="text-sm text-muted-foreground">
-                  {notification.description}
+                  {layer.description}
                 </p>
               </div>
+              <Switch
+                checked={layer.selected}
+                onCheckedChange={() => handleSwitchChange(layer)}
+              />
             </div>
           ))}
         </div>
       </CardContent>
-      <CardFooter>
-        <Button className="w-full">
-          <Check className="mr-2 h-4 w-4" /> Mark all as read
-        </Button>
-      </CardFooter>
     </Card>
   );
 }

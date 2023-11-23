@@ -1,13 +1,19 @@
 /* eslint-disable react/prop-types */
-import React from "react";
+import React, { useState } from "react";
 import { createRoot } from "react-dom/client";
 import { H3Map } from "@/components/Map";
-import { CardDemo } from "@/components/Card";
+import { LayerSelect } from "@/components/Card";
+
 export default function App({}) {
+  const [selectedLayer, setSelectedLayer] = useState(null);
   return (
     <div>
-      <CardDemo className="absolute top-5 right-5 z-10"></CardDemo>
-      <H3Map></H3Map>
+      <LayerSelect
+        className="absolute top-5 right-5 z-10"
+        selectedLayer={selectedLayer}
+        setSelectedLayer={setSelectedLayer}
+      />
+      <H3Map selectedLayer={selectedLayer}></H3Map>
     </div>
   );
 }
