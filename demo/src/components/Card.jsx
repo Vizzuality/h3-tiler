@@ -58,6 +58,9 @@ export function LayerSelect({
                 <p className="text-sm text-muted-foreground">
                   {layer.description}
                 </p>
+                <p className="text-sm text-left text-muted-foreground">
+                  Resolution: {layer.max_res}
+                </p>
               </div>
               <Switch
                 checked={layer.selected}

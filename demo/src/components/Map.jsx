@@ -17,9 +17,6 @@ const INITIAL_VIEW_STATE = {
   pitch: 0,
   bearing: 0,
 };
-// const COLORSCALE = scaleSequential()
-//   .domain([0, 1])
-//   .interpolator(interpolateViridis);
 
 const mapStyle =
   "https://basemaps.cartocdn.com/gl/positron-nolabels-gl-style/style.json";
@@ -56,6 +53,7 @@ export function H3Map({ selectedLayer }) {
                 let c = color(colorscale(Object.values(d)[0])).rgb();
                 return [c.r, c.g, c.b];
               },
+              opacity: 0.8,
             });
           }
           return new H3HexagonLayer({
@@ -72,6 +70,7 @@ export function H3Map({ selectedLayer }) {
               let c = color(colorscale(Object.values(d)[0])).rgb();
               return [c.r, c.g, c.b];
             },
+            opacity: 0.8,
           });
         },
       }),
