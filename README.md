@@ -9,29 +9,19 @@ Be warned that this repo is under heavy development and the approach of each par
 The important parts are:
 
 ```
-├── deck                            <- The client app
-│   ├── app.js
-│   ├── h3tile-layer.js            <- The deck.gl custom layer for h3 tiles
-│   ├── index.html
-│   └── package.json
-├── src                             <- The tiler app done in FastAPI
-│   └── h3tiler
-│       ├── main.py                 <- FastAPI entrypoint
-│       ├── config.py               <- Settings and env stuff
-│       ├── routing.py             <- API endpoints
-│       └── adapters
-│           └── postgres.py         <- Adapter for getting data from a postgres database
-├── db
-│   └── Dockerfile                  <- Dockerfile for the postgres database
-│
+.
+├── db                              <- Postgres DB setup example
+├── demo                            <- Demo client app
+├── h3tile-layer                    <- deck.gl custom layer module
 ├── scripts
 │   ├── raster_to_h3.py             <- Script for creating the h3 data from a file
 │   └── h3_file_to_db_table.py      <- Copy the h3 data from a file to a postgres table
+├── src                             <- The tiler service done in FastAPI
+│   └── h3tiler
+│       └── adapters                <- Adapter for getting data from a postgres database
 │
 ├── docker-compose.yml              <- Spin it all up
-.
-.
-.
+...
 ```
 
 ## Usage
@@ -46,9 +36,9 @@ docker compose up --build
 
 then run the scripts in `scripts/` to populate the database.
 
-### Local
+### Local Demo
 
-To run the client in `deck/` run:
+To run the client in `demo/` run:
 
 ```bash
 npm install
