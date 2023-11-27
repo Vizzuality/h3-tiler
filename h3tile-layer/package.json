@@ -1,0 +1,44 @@
+{
+  "name": "h3tile-layer",
+  "version": "0.1.0",
+  "description": "Deck.gl layer to request and render h3 tiles",
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "main": "dist/h3tile-layer.umd.js",
+  "module": "dist/h3tile-layer.es.js",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Vizzuality/h3-tiler.git",
+    "directory": "h3tile-layer"
+  },
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "keywords": [
+    "h3",
+    "deck.gl",
+    "layer",
+    "tiling",
+    "hexagon",
+    "hex",
+    "tile",
+    "deckgl"
+  ],
+  "author": "Vizzuality <hello@vizzuality.com>",
+  "license": "MIT",
+  "dependencies": {
+    "@deck.gl/geo-layers": "^8.6.5",
+    "@deck.gl/layers": "^8.6.5",
+    "@turf/bbox": "^6.5.0",
+    "@turf/bbox-polygon": "^6.5.0",
+    "@turf/helpers": "^6.5.0",
+    "h3-js": "^4.1.0"
+  },
+  "devDependencies": {
+    "vite": "^2.7.3"
+  }
+}

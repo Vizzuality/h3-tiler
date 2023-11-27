@@ -7,6 +7,7 @@ It assumes that h3 extension is installed in the database.
 import h3
 import psycopg
 from psycopg import AsyncConnection, sql
+from psycopg.rows import dict_row
 
 from ..config import get_settings
 
@@ -50,4 +51,32 @@ async def get_tile_from_h3index(
         results = cur.pgresult.get_value(0, 0)
         if not results:
             results = b"[]"
+    return results
+
+
+async def get_h3_tables_meta(conn: AsyncConnection) -> list:
+    """returns a list of tables that have h3 indexes"""
+    async with conn.cursor(row_factory=dict_row) as cur:
+        await cur.execute(
+            """
+            select h3_table_name, max_res, min_res, max_value, min_value, description, unit, name, column_name
+            from meta
+            """
+        )
+        results = await cur.fetchall()
+    return results
+
+
+async def get_h3_table_columns(table: str, conn: AsyncConnection) -> list:
+    """returns a list of tables that have h3 indexes"""
+    async with conn.cursor() as cur:
+        await cur.execute(
+            """
+            select column_name
+            from information_schema.columns
+            where table_name = %s and column_name != 'h3index'
+            """,
+            (table,),
+        )
+        results = [r[0] for r in await cur.fetchall()]
     return results

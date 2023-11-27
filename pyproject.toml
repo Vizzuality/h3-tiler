@@ -18,13 +18,9 @@ classifiers = [
 
 version = "0.1.0"
 
-[tool.black]
-line-length = 100
-
-[tool.isort]
-profile = "black"
-
 [tool.ruff]
+
+line-length = 100
 select = [
     "D1",   # pydocstyle errors
     "E",    # pycodestyle errors
@@ -32,6 +28,7 @@ select = [
     "F",    # flake8
     "C",    # flake8-comprehensions
     "B",    # flake8-bugbear
+    "I",    # isort
 ]
 ignore = [
     "E501"  # line too long, handled by black

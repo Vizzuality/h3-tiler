@@ -93,5 +93,7 @@ target/
 
 .ruff_cache
 
-node_modules
+**/node_modules
+**/package-lock.json
+**/bun.lockb
 package-lock.json
