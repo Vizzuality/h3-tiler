@@ -1,12 +1,12 @@
-# h3 Tiler
+# h3 Tiles
 
+![img.png](img.png)
 A simple tiler for h3 data.
 
-This repo can be considered a _reference implementation_ of what is needed to build a h3 tile system.
+This repo can be considered as a _reference implementation_ of what is needed to build a h3 tiling system and a
+possible approach (not necessarily the best).
 
-Be warned that this repo is under heavy development and the approach of each part doesn't have to be the optimal one.
-
-The important parts are:
+The repo is structured as:
 
 ```
 .
