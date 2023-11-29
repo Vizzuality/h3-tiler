@@ -208,7 +208,10 @@ def build_overviews_by_level(base_overview_file: Path, agg: str, h3res: int, las
         del df
 
 
-def clean_dataframe(df: pl.LazyFrame | pl.DataFrame) -> pl.LazyFrame | pl.DataFrame:  # noqa: D103
+def clean_dataframe(
+    df: pl.LazyFrame | pl.DataFrame,
+) -> pl.LazyFrame | pl.DataFrame:
+    """Clean dataframe from nulls and duplicates."""
     df = df.drop_nulls()
     df = df.rename({"cell": "h3index"})
     df = df.filter(pl.col("value") > 0)
