@@ -136,7 +136,9 @@ def raster_to_h3_windowed(
             df.to_csv(out_file, mode="a", index=False, header=False)
 
 
-def aggregate_cells(df: pl.LazyFrame, h3res: int, agg_func: str) -> pl.LazyFrame:
+def aggregate_cells(
+    df: pl.LazyFrame, h3res: int, agg_func: str, h3index_col_name: str = "h3index"
+) -> pl.LazyFrame:
     """Computes h3 aggregation of `df` at `h3res`.
     Returns columns in the order h3index, value.
     """
@@ -157,12 +159,14 @@ def aggregate_cells(df: pl.LazyFrame, h3res: int, agg_func: str) -> pl.LazyFrame
             raise ValueError(f"`agg_func` {agg_func} not found.")
 
     overview = (
-        df.with_columns(pl.col("h3index").h3.change_resolution(h3res).alias("h3index_parent"))
+        df.with_columns(
+            pl.col(h3index_col_name).h3.change_resolution(h3res).alias("h3index_parent")
+        )
         .with_columns(pl.col("h3index_parent").h3.cells_area_km2().alias("area_parent"))
         .group_by("h3index_parent")
         .agg(value=agg_expression)
     )
-    return overview.select([pl.col("h3index_parent").alias("h3index"), pl.col("value")])
+    return overview.select([pl.col("h3index_parent").alias(h3index_col_name), pl.col("value")])
 
 
 def build_overviews(  # noqa: D103
