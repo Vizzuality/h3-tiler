@@ -10,6 +10,9 @@
   },
   "dependencies": {
     "@deck.gl/react": "^8.9.32",
+    "@loaders.gl/arrow": "^4.0.4",
+    "@loaders.gl/core": "^3.4.14",
+    "@loaders.gl/parquet": "^4.0.4",
     "@radix-ui/react-select": "^2.0.0",
     "@radix-ui/react-slot": "^1.0.2",
     "@radix-ui/react-switch": "^1.0.3",

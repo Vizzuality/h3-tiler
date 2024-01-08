@@ -8,11 +8,11 @@ export default function App({}) {
   const [selectedLayer, setSelectedLayer] = useState(null);
   return (
     <div>
-      <LayerSelect
-        className="absolute top-5 right-5 z-10"
-        selectedLayer={selectedLayer}
-        setSelectedLayer={setSelectedLayer}
-      />
+      {/*<LayerSelect*/}
+      {/*  className="absolute top-5 right-5 z-10"*/}
+      {/*  selectedLayer={selectedLayer}*/}
+      {/*  setSelectedLayer={setSelectedLayer}*/}
+      {/*/>*/}
       <H3Map selectedLayer={selectedLayer}></H3Map>
     </div>
   );

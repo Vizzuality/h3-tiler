@@ -8,6 +8,8 @@ import H3TileLayer from "h3tile-layer";
 import { H3HexagonLayer } from "@deck.gl/geo-layers";
 import { ScatterplotLayer } from "@deck.gl/layers";
 import { Map } from "react-map-gl";
+import { ArrowLoader } from "@loaders.gl/arrow";
+import { load } from "@loaders.gl/core";
 
 const INITIAL_VIEW_STATE = {
   longitude: 0,
@@ -22,60 +24,70 @@ const mapStyle =
   "https://basemaps.cartocdn.com/gl/positron-nolabels-gl-style/style.json";
 
 export function H3Map({ selectedLayer }) {
-  let layers = [];
+  const colorscale = scaleSequential()
+    .domain([0, 10])
+    // .domain([selectedLayer.min_value, selectedLayer.max_value])
+    .interpolator(interpolateViridis);
 
-  if (selectedLayer) {
-    const colorscale = scaleSequential()
-      .domain([selectedLayer.min_value, selectedLayer.max_value])
-      .interpolator(interpolateViridis);
-
-    const maxZoom = selectedLayer.max_res - 5;
-    const dataUrl = `http://127.0.0.1:8000/${selectedLayer.h3_table_name}/${selectedLayer.column_name}/{h3index}`;
-    layers = [
-      new H3TileLayer({
-        data: dataUrl,
-        minZoom: 0,
-        maxZoom: maxZoom,
-        maxRequests: 10, // max simultaneous requests. Set 0 for unlimited
-        maxCacheSize: 300, // max number of tiles to keep in the cache
-        renderSubLayers: (props) => {
-          // For zoom < 1 (~whole world view), render a scatterplot layer instead of the hexagon layer
-          // It is faster to render points than hexagons (is it?) when there are many cells.
-          if (props.tile.zoom < 1) {
-            return new ScatterplotLayer({
-              id: props.id,
-              data: props.data,
-              pickable: true,
-              radiusUnits: "meters",
-              getRadius: 9854, // is the radius of a h3 cell at resolution 5 in meters
-              getPosition: (d) => cellToLatLng(Object.keys(d)[0]).reverse(),
-              getFillColor: (d) => {
-                let c = color(colorscale(Object.values(d)[0])).rgb();
-                return [c.r, c.g, c.b];
-              },
-              opacity: 0.8,
-            });
-          }
-          return new H3HexagonLayer({
+  // const maxZoom = selectedLayer.max_res - 5;
+  const maxZoom = 12;
+  // const dataUrl = `http://127.0.0.1:8000/tile/{h3index}`;
+  let layers = [
+    new H3TileLayer({
+      id: "tile-h3s",
+      data: "http://127.0.0.1:8000/tile/{h3index}",
+      getTileData: (tile) => {
+        return load(tile.url, ArrowLoader, {
+          arrow: { shape: "object-row-table" },
+        }).then((data) => {
+          return data.data;
+        });
+      },
+      minZoom: 0,
+      maxZoom: maxZoom,
+      maxRequests: 10, // max simultaneous requests. Set 0 for unlimited
+      maxCacheSize: 300, // max number of tiles to keep in the cache
+      renderSubLayers: (props) => {
+        // For zoom < 1 (~whole world view), render a scatterplot layer instead of the hexagon layer
+        // It is faster to render points than hexagons (is it?) when there are many cells.
+        if (props.tile.zoom < 1) {
+          return new ScatterplotLayer({
             id: props.id,
             data: props.data,
-            highPrecision: "auto",
             pickable: true,
-            wireframe: false,
-            filled: true,
-            extruded: false,
-            stroked: false,
-            getHexagon: (d) => Object.keys(d)[0],
+            radiusUnits: "meters",
+            getRadius: 9854, // is the radius of a h3 cell at resolution 5 in meters
+            getPosition: (d) =>
+              cellToLatLng(BigInt(d.cell).toString(16)).reverse(),
             getFillColor: (d) => {
-              let c = color(colorscale(Object.values(d)[0])).rgb();
+              let c = color(colorscale(d.value)).rgb();
               return [c.r, c.g, c.b];
             },
             opacity: 0.8,
           });
-        },
-      }),
-    ];
-  }
+        }
+        return new H3HexagonLayer({
+          id: props.id,
+          data: props.data,
+          highPrecision: "auto",
+          pickable: true,
+          wireframe: false,
+          filled: true,
+          extruded: false,
+          stroked: false,
+          getHexagon: (d) => {
+            const res = BigInt(d.cell);
+            return res.toString(16);
+          },
+          getFillColor: (d) => {
+            let c = color(colorscale(d.value)).rgb();
+            return [c.r, c.g, c.b];
+          },
+          opacity: 0.8,
+        });
+      },
+    }),
+  ];
 
   return (
     <DeckGL

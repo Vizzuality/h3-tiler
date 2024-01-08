@@ -152,7 +152,7 @@ def aggregate_cells(
             agg_expression = agg_expression.count()
         case "relative_area":
             agg_expression = (
-                (pl.col("h3index").h3.cells_area_km2() * pl.col("value")).sum()
+                (pl.col(h3index_col_name).h3.cells_area_km2() * pl.col("value")).sum()
                 / pl.col("area_parent").first()
             ).cast(pl.Float64)
         case _:
@@ -162,7 +162,7 @@ def aggregate_cells(
         df.with_columns(
             pl.col(h3index_col_name).h3.change_resolution(h3res).alias("h3index_parent")
         )
-        .with_columns(pl.col("h3index_parent").h3.cells_area_km2().alias("area_parent"))
+        # .with_columns(pl.col("h3index_parent").h3.cells_area_km2().alias("area_parent"))
         .group_by("h3index_parent")
         .agg(value=agg_expression)
     )
