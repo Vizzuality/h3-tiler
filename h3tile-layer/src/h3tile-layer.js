@@ -83,7 +83,7 @@ export class H3Tileset2D extends Tileset2D {
    * it decreases the resolution until the number of cells is below a threshold.
    * */
   getTileIndices(opts) {
-    let tileRes = Math.max(Math.floor(opts.viewport.zoom / 1.7 - 1), 0);
+    let tileRes = Math.max(Math.floor(opts.viewport.zoom / 2 - 1), 0);
 
     if (
       typeof opts.minZoom === "number" &&

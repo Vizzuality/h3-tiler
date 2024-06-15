@@ -2,16 +2,15 @@
 import os
 
 import h3
-from fastapi import APIRouter, HTTPException
-from fastapi.responses import FileResponse, Response
-from starlette.requests import Request
-from starlette.responses import JSONResponse
-
-from .adapters.postgres import (
+from adapters.postgres import (
     get_h3_table_columns,
     get_h3_tables_meta,
     get_tile_from_h3index,
 )
+from fastapi import APIRouter, HTTPException
+from fastapi.responses import FileResponse, Response
+from starlette.requests import Request
+from starlette.responses import JSONResponse
 
 h3index_router = APIRouter()
 
@@ -27,7 +26,9 @@ async def h3index_parquet(h3index: str) -> FileResponse:
     :raises HTTPException 404: Item not found
     """
     z = h3.get_resolution(h3index)
-    file = f"/home/biel/Vizzuality/experiments/h3-tiler/data/test_arrow/{z}/{h3index}.arrow"
+    file = (
+        f"/home/biel/Vizzuality/experiments/h3-tiler/data/amazonia360-raw/pop/{z}/{h3index}.arrow"
+    )
     if not os.path.exists(file):
         raise HTTPException(status_code=404, detail="Item not found")
     return FileResponse(file, media_type="application/octet-stream")

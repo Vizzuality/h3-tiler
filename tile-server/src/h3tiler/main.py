@@ -1,12 +1,12 @@
 """Main module for the H3-Tiler API."""
 import time
 
+import uvicorn
 from fastapi import FastAPI
+from routing import h3index_router
 from starlette.middleware.cors import CORSMiddleware
 from starlette.middleware.gzip import GZipMiddleware
 from starlette.requests import Request
-
-from .routing import h3index_router
 
 # @asynccontextmanager
 # async def lifespan(app_: FastAPI):
@@ -39,3 +39,6 @@ app.add_middleware(
 )
 
 app.include_router(h3index_router)
+
+if __name__ == "__main__":
+    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)

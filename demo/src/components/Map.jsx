@@ -1,15 +1,15 @@
+import { H3HexagonLayer } from "@deck.gl/geo-layers";
+import { ScatterplotLayer } from "@deck.gl/layers";
+import DeckGL from "@deck.gl/react";
+import { ArrowLoader } from "@loaders.gl/arrow";
+import { load } from "@loaders.gl/core";
+import { color } from "d3-color";
 import { scaleSequential } from "d3-scale";
 import { interpolateViridis } from "d3-scale-chromatic";
 import { cellToLatLng } from "h3-js";
-import { color } from "d3-color";
-import DeckGL from "@deck.gl/react";
-import maplibregl from "maplibre-gl";
 import H3TileLayer from "h3tile-layer";
-import { H3HexagonLayer } from "@deck.gl/geo-layers";
-import { ScatterplotLayer } from "@deck.gl/layers";
+import maplibregl from "maplibre-gl";
 import { Map } from "react-map-gl";
-import { ArrowLoader } from "@loaders.gl/arrow";
-import { load } from "@loaders.gl/core";
 
 const INITIAL_VIEW_STATE = {
   longitude: 0,
@@ -25,17 +25,17 @@ const mapStyle =
 
 export function H3Map({ selectedLayer }) {
   const colorscale = scaleSequential()
-    .domain([0, 10])
+    .domain([0, 5])
     // .domain([selectedLayer.min_value, selectedLayer.max_value])
     .interpolator(interpolateViridis);
 
   // const maxZoom = selectedLayer.max_res - 5;
   const maxZoom = 12;
-  // const dataUrl = `http://127.0.0.1:8000/tile/{h3index}`;
+  // const dataUrl = `https://dev.api.amazonia360.dev-vizzuality.com/grid/tile/{h3index}`;
   let layers = [
     new H3TileLayer({
       id: "tile-h3s",
-      data: "http://127.0.0.1:8000/tile/{h3index}",
+      data: "https://dev.api.amazonia360.dev-vizzuality.com/grid/tile/{h3index}",
       getTileData: (tile) => {
         return load(tile.url, ArrowLoader, {
           arrow: { shape: "object-row-table" },
@@ -60,7 +60,7 @@ export function H3Map({ selectedLayer }) {
             getPosition: (d) =>
               cellToLatLng(BigInt(d.cell).toString(16)).reverse(),
             getFillColor: (d) => {
-              let c = color(colorscale(d.value)).rgb();
+              let c = color(colorscale(d.fire)).rgb();
               return [c.r, c.g, c.b];
             },
             opacity: 0.8,
@@ -75,12 +75,14 @@ export function H3Map({ selectedLayer }) {
           filled: true,
           extruded: false,
           stroked: false,
+          // getLineColor: [255, 255, 255, 255],
+          // getLineWidth:  10,
           getHexagon: (d) => {
             const res = BigInt(d.cell);
             return res.toString(16);
           },
           getFillColor: (d) => {
-            let c = color(colorscale(d.value)).rgb();
+            let c = color(colorscale(d.fire)).rgb();
             return [c.r, c.g, c.b];
           },
           opacity: 0.8,
@@ -94,6 +96,9 @@ export function H3Map({ selectedLayer }) {
       layers={layers}
       initialViewState={INITIAL_VIEW_STATE}
       controller={true}
+      getTooltip={({ object }) =>
+        object && `id: ${object.cell}\n value: ${object.fire}`
+      }
     >
       <Map
         reuseMaps

@@ -6,10 +6,9 @@ It assumes that h3 extension is installed in the database.
 
 import h3
 import psycopg
+from config import get_settings
 from psycopg import AsyncConnection, sql
 from psycopg.rows import dict_row
-
-from ..config import get_settings
 
 
 def get_connection_info() -> str:
@@ -59,7 +58,8 @@ async def get_h3_tables_meta(conn: AsyncConnection) -> list:
     async with conn.cursor(row_factory=dict_row) as cur:
         await cur.execute(
             """
-            select h3_table_name, max_res, min_res, max_value, min_value, description, unit, name, column_name
+            select h3_table_name, max_res, min_res,
+                max_value, min_value, description, unit, name, column_name
             from meta
             """
         )

@@ -2,7 +2,7 @@ version: "3.8"
 services:
   h3-tiler:
     build:
-      context: .
+      context: tile-server
     container_name: h3-tiler
     env_file: .env
     ports:

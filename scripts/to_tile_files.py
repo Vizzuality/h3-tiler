@@ -30,12 +30,13 @@ def to_parquet_files(
         int, typer.Option(help="Dive and process the raster in chunks to reduce the memory usage.")
     ] = 2,
     use_hex: Annotated[bool, typer.Option(help="Output h3 index as hex string.")] = False,
+    h3_res: Annotated[int | None, typer.Option(help="Output h3 resolution.")] = None,
 ) -> None:
     """Convert a raster to a h3 file."""
     seen_tiles = set()
 
     with rio.open(input_file) as src:
-        h3res = nearest_h3_resolution(src.shape, src.transform)
+        h3res = h3_res if h3_res is not None else nearest_h3_resolution(src.shape, src.transform)
         print(f"Will process {splits ** 2} chunks at h3 resolution {h3res}")
 
         # iterate over raster chunks
@@ -82,11 +83,14 @@ def to_parquet_files(
                 overview_output_path.mkdir(exist_ok=True, parents=True)
 
                 # make tiles
-                partition_dfs = df.partition_by("tile", as_dict=True, include_key=False)
+                partition_dfs = df.partition_by(["tile"], as_dict=True, include_key=False)
 
-                for tile_id, tile_df in track(partition_dfs.items(), description="Writing tiles"):
+                for tile_group, tile_df in track(
+                    partition_dfs.items(), description="Writing tiles"
+                ):
                     if tile_df.shape[0] == 0:  # todo: skip empty tiles ?
                         continue
+                    tile_id = tile_group[0]
                     filename = overview_output_path / (hex(tile_id)[2:] + ".arrow")
                     if tile_id in seen_tiles:
                         pl.concat([pl.read_ipc(filename), tile_df]).unique(
