@@ -19,8 +19,8 @@ class LevelStats(BaseModel):
         le=15,
         description="Stats for this level. AKA Overview or zoom level in other applications",
     )
-    min: int | float
-    max: int | float
+    min: int | float | None = Field(..., description="null value represents -infinity")
+    max: int | float | None = Field(..., description="null value represents infinity")
 
 
 class NumericalLegend(BaseModel):

@@ -14,6 +14,7 @@ from h3ronpy.polars.raster import nearest_h3_resolution, raster_to_dataframe
 from rasterio.windows import Window
 from rich.progress import Progress, SpinnerColumn
 
+from h3lper.cli.common import make_polars_schema
 from h3lper.models import MultiDatasetMeta
 
 MIN_TILE_LEVEL = 0
@@ -99,7 +100,7 @@ def make_overviews(
     output_path: Path,
     overview_level: int,
     agg_func: str,
-    var_column_name: str,
+    var_name: str,
     progress: Progress,
     meta: dict,
 ) -> None:
@@ -121,14 +122,14 @@ def make_overviews(
             df,
             overview_resolution,
             agg_func,
-            var_column_name,
+            var_name,
             h3index_col_name=DEFAULT_CELL_COLUMN_NAME,
         ).with_columns(
             pl.col(DEFAULT_CELL_COLUMN_NAME).h3.change_resolution(overview_level).alias("tile_id")
         )
 
-        max_value = max(max_value, df.select(var_column_name).max().collect().item())
-        min_value = min(min_value, df.select(var_column_name).min().collect().item())
+        max_value = max(max_value, df.select(var_name).max().collect().item())
+        min_value = min(min_value, df.select(var_name).min().collect().item())
 
         partition_dfs = df.collect().partition_by(["tile_id"], as_dict=True, include_key=False)
         for tile_group, tile_df in partition_dfs.items():
@@ -179,7 +180,9 @@ def raster_to_h3(
         # cells that are RESOLUTION_TO_LEVEL_DIFF resolutions below it.
         base_tile_level = h3_res - RESOLUTION_TO_LEVEL_DIFF
 
-        progress.console.print(f"+ Base resolution: {h3_res}\n+ Base level: {base_tile_level}\n")
+        progress.console.print(
+            f"Converting to h3 resolution {h3_res}. Tiling at level {base_tile_level}\n"
+        )
 
         meta["datasets"][0].update(
             {
@@ -206,7 +209,7 @@ def raster_to_h3(
             )
             data = src.read(1, window=window)
             win_transform = src.window_transform(window)
-            nodata = nodata if nodata is not None else src.nodata
+            nodata = nodata if nodata is not None else int(src.nodata)
             df = raster_to_dataframe(
                 data,
                 win_transform,
@@ -214,7 +217,6 @@ def raster_to_h3(
                 nodata_value=nodata,
                 compact=compact_filtering,
             ).lazy()
-
             if compact_filtering:
                 df = (
                     df.filter(pl.col("value") > 0)
@@ -228,14 +230,18 @@ def raster_to_h3(
                 )
 
             df = (
-                df.rename({"value": var_name})
-                .with_columns(
-                    pl.col(DEFAULT_CELL_COLUMN_NAME)
-                    .h3.change_resolution(base_tile_level)
-                    .alias("tile_id")
+                (
+                    df.rename({"value": var_name})
+                    .with_columns(
+                        pl.col(DEFAULT_CELL_COLUMN_NAME)
+                        .h3.change_resolution(base_tile_level)
+                        .alias("tile_id")
+                    )
+                    .unique(subset=[DEFAULT_CELL_COLUMN_NAME])
                 )
-                .unique(subset=[DEFAULT_CELL_COLUMN_NAME])
-            ).collect()
+                .cast(make_polars_schema(meta["datasets"]))
+                .collect()
+            )
 
             max_value = max(max_value, df.select(var_name).max().item())
             min_value = min(min_value, df.select(var_name).min().item())
@@ -278,8 +284,8 @@ def raster_to_h3(
 @click.command(name="tile")
 @click.argument("input_file", type=click.Path(exists=True, path_type=Path))
 @click.argument("output_path", type=click.Path(path_type=Path))
-@click.option("--var_column_name", required=True, help="Column name in the arrow ipc")
-@click.option("--nodata", default=0, help="Set nodata value.")
+@click.option("--var-name", required=True, help="Column name in the arrow ipc")
+@click.option("--nodata", help="Use this nodata instead of internal value")
 @click.option(
     "--agg-func",
     type=click.Choice([func.name for func in AvailableAggFunctions], case_sensitive=False),
@@ -299,7 +305,7 @@ def raster_to_h3(
 def main(
     input_file: Path,
     output_path: Path,
-    var_column_name: str,
+    var_name: str,
     nodata: int,
     agg_func: str,
     splits: int,
@@ -317,7 +323,7 @@ def main(
             nodata,
             output_path,
             splits,
-            var_column_name,
+            var_name,
             compact,
             meta,
             progress,
@@ -344,7 +350,7 @@ def main(
                 overview_path,
                 next_tile_level,
                 agg_func,
-                var_column_name,
+                var_name,
                 progress,
                 meta,
             )
