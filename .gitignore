@@ -97,3 +97,5 @@ target/
 **/package-lock.json
 **/bun.lockb
 package-lock.json
+
+pyrightconfig.json

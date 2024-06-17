@@ -25,8 +25,8 @@ class LevelStats(BaseModel):
 
 class NumericalLegend(BaseModel):
     legend_type: Literal["discrete"] | Literal["continuous"]
+    colormap_name: str | None = Field("viridis", description="suggestion of color map to use")
     stats: list[LevelStats]
-    colormap_name: str = Field(description="suggestion of color map to use")
 
 
 class CategoricalLegendEntry(BaseModel):
@@ -38,20 +38,20 @@ class CategoricalLegendEntry(BaseModel):
 
 class CategoricalLegend(BaseModel):
     legend_type: Literal["categorical"]
-    categories: list[CategoricalLegendEntry]
+    entries: list[CategoricalLegendEntry]
 
 
 class DatasetMeta(BaseModel):
     var_name: str = Field(description="Column name")
     var_dtype: str = Field(description="Column dtype. ")
     description: str
-    legend: CategoricalLegend | NumericalLegend = Field(discriminator="legend_type")
     aggregate_method: str = Field(
         description="Aggregation method used to compute the overview levels"
     )
     lineage: list[str] | None = Field(
         default=None, description="Source data used to compute this dataset"
     )
+    legend: CategoricalLegend | NumericalLegend = Field(discriminator="legend_type")
 
 
 class H3GridInfo(BaseModel):

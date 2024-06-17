@@ -27,11 +27,6 @@ logging.basicConfig(level=logging.INFO, handlers=[RichHandler()])
 log = logging.getLogger("combine_tiles")
 
 
-@click.group()
-def cli():  # noqa: D103
-    ...
-
-
 def check_dataset_format(tile_source: Path) -> None:
     """Simple sanity check to ensure that all tile sources are valid."""
     if not tile_source.exists():
@@ -84,7 +79,7 @@ def make_polars_schema(metas: list[dict]) -> dict:
     return {e["var_name"]: numpy_to_polars_dtype[e["var_dtype"]] for e in metas}
 
 
-@cli.command(name="combine")
+@click.command(name="combine")
 @click.argument("datasets", type=click.Path(exists=True, path_type=Path), nargs=-1)
 @click.argument("out_path", type=click.Path(path_type=Path))
 def main(datasets: list[Path], out_path: Path) -> None:
@@ -156,7 +151,7 @@ def main(datasets: list[Path], out_path: Path) -> None:
 
             out_dataset_path = out_path / str(level)
             out_dataset_path.mkdir(parents=True, exist_ok=True)
-            tile_df.collect().write_ipc(out_dataset_path / tile_name, compression=None)
+            tile_df.collect().write_ipc(out_dataset_path / tile_name)
 
     with open(out_path / "meta.json", "w") as f:
         json.dump(metas, f)
