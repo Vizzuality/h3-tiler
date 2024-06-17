@@ -3,9 +3,11 @@ import click
 import h3lper.cli.combine_tiles
 import h3lper.cli.tiling
 
+
 @click.group
-def cli():
+def cli():  # noqa: D103
     pass
+
 
 cli.add_command(h3lper.cli.combine_tiles.main)
 cli.add_command(h3lper.cli.tiling.main)

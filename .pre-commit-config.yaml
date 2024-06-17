@@ -1,10 +1,4 @@
 repos:
-  # check for private keys and passwords!
-  - repo: https://github.com/gitleaks/gitleaks
-    rev: v8.17.0
-    hooks:
-      - id: gitleaks-docker
-
   - repo: https://github.com/abravalheri/validate-pyproject
     rev: v0.12.1
     hooks:

@@ -14,17 +14,12 @@ Tiles must have unique column names and be folders with the format:
 """
 
 import json
-import logging
 from pathlib import Path
 
 import click
 import polars as pl
 from rich import print
-from rich.logging import RichHandler
 from rich.progress import track
-
-logging.basicConfig(level=logging.INFO, handlers=[RichHandler()])
-log = logging.getLogger("combine_tiles")
 
 
 def check_dataset_format(tile_source: Path) -> None:
@@ -129,7 +124,7 @@ def main(datasets: list[Path], out_path: Path) -> None:
                     continue
                 dfs.append(pl.scan_ipc(tile_file))
             tile_df = pl.concat(dfs, how="diagonal", parallel=True)
-            # Weird chungus oneliner to stack repeated cell indices that does
+            # oneliner to stack repeated cell indices in the way:
             # ┌──────┬──────┬──────┐
             # │ cell ┆ b    ┆ c    │
             # │ ---  ┆ ---  ┆ ---  │     ┌──────┬──────┬─────┐
@@ -145,8 +140,8 @@ def main(datasets: list[Path], out_path: Path) -> None:
             # │ 5    ┆ null ┆ b    │     │ 6    ┆ null ┆ c   │
             # │ 6    ┆ null ┆ c    │     └──────┴──────┴─────┘
             # └──────┴──────┴──────┘
-            # Must be more idiomatic way to do this. We can safely use max because there must be
-            # only one none null value in each group
+            # There must be a more idiomatic way to do this. We can safely use max because there
+            # must be only one none null value in each group
             tile_df = tile_df.group_by("cell", maintain_order=True).agg(pl.all().max())
 
             out_dataset_path = out_path / str(level)

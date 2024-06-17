@@ -1,9 +1,7 @@
 """Convert a raster to h3 chunks."""
 
-import json
-import logging
-from enum import Enum
 import math
+from enum import Enum
 from pathlib import Path
 from typing import Iterator
 
@@ -15,17 +13,12 @@ from h3ronpy.polars import uncompact
 from h3ronpy.polars.raster import nearest_h3_resolution, raster_to_dataframe
 from rasterio.windows import Window
 from rich import print
-from rich.logging import RichHandler
-from rich.progress import Progress
+from rich.progress import Progress, SpinnerColumn
 
 from h3lper.models import MultiDatasetMeta
 
 MIN_TILE_LEVEL = 0
 RESOLUTION_TO_LEVEL_DIFF = 5
-
-logging.basicConfig(handlers=[RichHandler()], level=logging.INFO)
-log = logging.getLogger(__name__)
-
 
 
 class AvailableAggFunctions(str, Enum):  # noqa: D101
@@ -53,7 +46,7 @@ def chunk_generator(splits: int, width: int, height: int) -> Iterator[Window]:
         +-------+-------+
     """
     if splits == 0:
-        yield  Window(0, 0, width, height)
+        yield Window(0, 0, width, height)
         return
     h_chunk_size = math.ceil(height / splits)
     w_chunk_size = math.ceil(width / splits)
@@ -112,7 +105,7 @@ def make_overviews(
     agg_func: str,
     var_column_name: str,
     progress: Progress,
-    meta: dict
+    meta: dict,
 ) -> None:
     """Compute higher resolution tiles with agg function `agg_func`."""
     tiles = list(base_level_path.glob("*.arrow"))
@@ -144,13 +137,15 @@ def make_overviews(
             tile_id = tile_group[0]
             filename = output_path / (hex(tile_id)[2:] + ".arrow")
             if tile_id in seen_tiles:
-                pl.concat([pl.read_ipc(filename), tile_df], how="vertical_relaxed").unique(subset=["cell"]).write_ipc(
-                    filename
-                )
+                pl.concat([pl.read_ipc(filename), tile_df], how="vertical_relaxed").unique(
+                    subset=["cell"]
+                ).write_ipc(filename)
             else:
                 seen_tiles.add(tile_id)
                 tile_df.write_ipc(filename)
-    meta["datasets"][0]["legend"]["stats"].append({"level": overview_level, "max": max_value,  "min": min_value})
+    meta["datasets"][0]["legend"]["stats"].append(
+        {"level": overview_level, "max": max_value, "min": min_value}
+    )
     progress.update(iter_tiles_task, visible=False)
     print(
         f"Computed {len(seen_tiles)} overview tiles at resolution {overview_resolution}."  # noqa E501
@@ -174,9 +169,9 @@ def raster_to_h3(
     """
     seen_tiles = set()
     n_chunks = splits**2
-    progress = Progress(transient=True)
+    progress = Progress(SpinnerColumn(), *Progress.get_default_columns(), transient=True)
     progress.start()
-    read_chunk_task = progress.add_task("Sampling raster to h3", total=n_chunks)
+    read_chunk_task = progress.add_task("[cyan]Sampling raster to h3...", total=n_chunks)
     with rio.open(input_file) as src:
         h3_res = h3_res if h3_res is not None else nearest_h3_resolution(src.shape, src.transform)
         # Resolution of the tile index. A tile is a h3 cell that contains all the
@@ -194,11 +189,12 @@ def raster_to_h3(
 
         base_level_path = output_path / str(base_tile_level)
         base_level_path.mkdir(exist_ok=True, parents=True)
-        n_tiles = 0
         max_value = 0
         min_value = math.inf
         for i, window in enumerate(chunk_generator(splits, src.width, src.height)):
-            progress.update(read_chunk_task, description=f"Processing chunk {i + 1}/{n_chunks}")
+            progress.update(
+                read_chunk_task, description=f"[cyan]Processing part {i + 1}/{n_chunks}..."
+            )
             data = src.read(1, window=window)
             win_transform = src.window_transform(window)
             nodata = nodata if nodata is not None else src.nodata
@@ -236,7 +232,6 @@ def raster_to_h3(
             min_value = min(min_value, df.select(var_name).min().collect().item())
 
             partition_dfs = df.collect().partition_by(["tile_id"], as_dict=True, include_key=False)
-            n_tiles += len(partition_dfs)
 
             write_tiles_task = progress.add_task("Writing tiles")
 
@@ -260,19 +255,13 @@ def raster_to_h3(
         {
             "legend": {
                 "legend_type": "continuous",
-                "stats": [
-                    {
-                    "level": base_tile_level,
-                    "max": max_value,
-                    "min": min_value
-                }
-                ]
+                "stats": [{"level": base_tile_level, "max": max_value, "min": min_value}],
             }
         }
     )
 
     progress.stop()
-    print(f"Converted {input_file} to {n_tiles} h3 tiles with resolution {h3_res}.")
+    print(f"Converted {input_file} to {len(seen_tiles)} h3 tiles with resolution {h3_res}.")
     return base_level_path, base_tile_level
 
 
@@ -306,22 +295,24 @@ def main(
 ) -> None:
     """Convert a raster dataset to a h3 tiled dataset."""
 
-    meta = {"datasets": [dict()], "h3_grid_info": [dict()]}  # type: ignore
+    meta = {"datasets": [{}], "h3_grid_info": [{}]}  # type: ignore
 
     base_level_path, base_tile_level = raster_to_h3(
         h3_res, input_file, nodata, output_path, splits, var_column_name, compact, meta
     )
 
-    meta["h3_grid_info"][0].update({"level": base_tile_level, "h3_cells_resolution": 6, "h3_cells_count": 100})
+    meta["h3_grid_info"][0].update(
+        {"level": base_tile_level, "h3_cells_resolution": 6, "h3_cells_count": 100}
+    )
 
     # ----------------------------------------------------------
     #                    MAKE OVERVIEWS
     # ----------------------------------------------------------
 
-    progress = Progress(transient=True)
+    progress = Progress(SpinnerColumn(), *Progress.get_default_columns(), transient=True)
     progress.start()
     total_computing_overviews_task = progress.add_task(
-        "Computing overviews", total=base_tile_level - 1
+        "[cyan]Computing overviews ...", total=base_tile_level - 1
     )
 
     current_tile_path = base_level_path
@@ -342,7 +333,7 @@ def main(
             agg_func,
             var_column_name,
             progress,
-            meta
+            meta,
         )
 
         next_tile_level -= 1
@@ -354,8 +345,7 @@ def main(
     meta["datasets"][0].update({"aggregate_method": agg_func})
 
     with open(output_path / "meta.json", "w") as meta_file:
-        meta_file.write(MultiDatasetMeta(**meta).model_dump_json(indent=2))
-
+        meta_file.write(MultiDatasetMeta(**meta).model_dump_json(indent=2))  # type: ignore
 
 
 if __name__ == "__main__":
