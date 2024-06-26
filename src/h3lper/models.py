@@ -43,9 +43,10 @@ class CategoricalLegend(BaseModel):
 
 class DatasetMeta(BaseModel):
     var_name: str = Field(description="Column name")
-    var_dtype: str = Field(description="Column dtype. ")
+    var_dtype: str = Field(description="Column dtype.")
+    nodata: int | None
     description: str
-    aggregate_method: str = Field(
+    aggregation_method: str = Field(
         description="Aggregation method used to compute the overview levels"
     )
     lineage: list[str] | None = Field(

@@ -1,5 +1,15 @@
+from pathlib import Path
+from typing import Any, overload
+
+import pandas as pd
 import polars as pl
+from h3ronpy.h3ronpyrs import DEFAULT_CELL_COLUMN_NAME
+from h3ronpy.pandas import change_resolution
 from polars.type_aliases import PolarsDataType
+from rich.progress import Progress
+
+RESOLUTION_TO_LEVEL_DIFF = 5
+MIN_TILE_LEVEL = 0
 
 
 def make_polars_schema(meta: dict) -> dict[str, PolarsDataType]:
@@ -24,3 +34,57 @@ def make_polars_schema(meta: dict) -> dict[str, PolarsDataType]:
         "void": pl.Null,  # Map NumPy void type to Polars Null
     }
     return {d["var_name"]: numpy_to_polars_dtype[d["var_dtype"]] for d in meta}
+
+
+@overload
+def partition_dataframe_by_tile(df: pl.DataFrame, tile_level: int) -> dict[Any, pl.DataFrame]:
+    ...
+
+
+@overload
+def partition_dataframe_by_tile(df: pd.DataFrame, tile_level: int) -> dict[Any, pd.DataFrame]:  # type: ignore
+    ...
+
+
+def partition_dataframe_by_tile(df, tile_level: int):
+    """Partition dataframe by tile. Returns groups belonging to a
+    tile of the given level"""
+    if isinstance(df, pl.DataFrame):
+        df = df.with_columns(
+            pl.col(DEFAULT_CELL_COLUMN_NAME).h3.change_resolution(tile_level).alias("tile_id")
+        ).unique(subset=[DEFAULT_CELL_COLUMN_NAME])
+        partitions = df.partition_by(["tile_id"], as_dict=True, include_key=False)
+
+    elif isinstance(df, pd.DataFrame):
+        df["tile_id"] = change_resolution(df[DEFAULT_CELL_COLUMN_NAME], tile_level).drop_duplicates(
+            subset=DEFAULT_CELL_COLUMN_NAME
+        )
+        partitions = dict(df.groupby("tile_id"))
+
+    else:
+        raise ValueError(f"dataframe type {type(df)} not supported")
+
+    return partitions
+
+
+def write_tiles(
+    partition_dfs: dict[Any, pd.DataFrame] | dict[Any, pl.DataFrame],
+    progress: Progress,
+    seen_tiles: set[int],
+    base_level_path: Path,
+):
+    """Writes tiles"""
+    write_tiles_task = progress.add_task("[cyan]Writing tiles...")
+
+    for tile_group, tile_df in progress.track(partition_dfs.items(), task_id=write_tiles_task):
+        tile_id = tile_group[0]
+        filename = base_level_path / (hex(tile_id)[2:] + ".arrow")
+        progress.update(write_tiles_task)
+        if tile_id in seen_tiles:
+            pl.concat([pl.read_ipc(filename), tile_df]).unique(
+                subset=[DEFAULT_CELL_COLUMN_NAME]
+            ).write_ipc(filename)
+        else:
+            tile_df.write_ipc(filename)
+        seen_tiles.add(tile_id)
+    progress.update(write_tiles_task, visible=False)

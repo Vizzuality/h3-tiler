@@ -14,11 +14,14 @@ from h3ronpy.polars.raster import nearest_h3_resolution, raster_to_dataframe
 from rasterio.windows import Window
 from rich.progress import Progress, SpinnerColumn
 
-from h3lper.cli.common import make_polars_schema
+from h3lper.cli.common import (
+    MIN_TILE_LEVEL,
+    RESOLUTION_TO_LEVEL_DIFF,
+    make_polars_schema,
+    partition_dataframe_by_tile,
+    write_tiles,
+)
 from h3lper.models import MultiDatasetMeta
-
-MIN_TILE_LEVEL = 0
-RESOLUTION_TO_LEVEL_DIFF = 5
 
 
 class AvailableAggFunctions(str, Enum):  # noqa: D101
@@ -138,11 +141,11 @@ def make_overviews(
             tile_id = tile_group[0]
             filename = output_path / (hex(tile_id)[2:] + ".arrow")
             if tile_id in seen_tiles:
-                df = pl.concat([pl.read_ipc(filename), tile_df], how="vertical_relaxed").unique(
-                    subset=["cell"]
-                )
-                df.write_ipc(filename)
-                n_cells += len(df)
+                tile_df = pl.concat(
+                    [pl.read_ipc(filename), tile_df], how="vertical_relaxed"
+                ).unique(subset=["cell"])
+                tile_df.write_ipc(filename)
+                n_cells += len(tile_df)
             else:
                 seen_tiles.add(tile_id)
                 tile_df.write_ipc(filename)
@@ -173,22 +176,21 @@ def raster_to_h3(
     :returns:
         tuple(base_level_path, base_tile_level)
     """
-    seen_tiles = set()
+
+    seen_tiles: set[int] = set()
+
     with rio.open(input_file) as src:
         h3_res = h3_res if h3_res is not None else nearest_h3_resolution(src.shape, src.transform)
         # Resolution of the tile index. A tile is a h3 cell that contains all the
         # cells that are RESOLUTION_TO_LEVEL_DIFF resolutions below it.
         base_tile_level = h3_res - RESOLUTION_TO_LEVEL_DIFF
-
-        progress.console.print(
-            f"Converting to h3 resolution {h3_res}. Tiling at level {base_tile_level}\n"
-        )
-
+        nodata = nodata if nodata is not None else int(src.nodata)
         meta["datasets"][0].update(
             {
                 "var_name": var_name,
                 "var_dtype": src.dtypes[0],
                 "lineage": [str(input_file)],
+                "nodata": nodata,
                 "description": "",
             }
         )
@@ -199,17 +201,18 @@ def raster_to_h3(
         max_value = 0
         min_value = math.inf
         n_cells = 0
-
+        progress.console.print(
+            f"Converting to h3 resolution {h3_res}. Tiling at level {base_tile_level}\n"
+        )
         read_chunk_task = progress.add_task("[cyan]Processing part...", total=None)
         for i, window in enumerate(chunk_generator(splits, src.width, src.height)):
             progress.update(
                 read_chunk_task,
-                description=f"[cyan]Processing part {i + 1}/{splits**2}...",
+                description=f"[cyan]Processing part {i + 1}/{splits ** 2}...",
                 total=splits**2,
             )
             data = src.read(1, window=window)
             win_transform = src.window_transform(window)
-            nodata = nodata if nodata is not None else int(src.nodata)
             df = raster_to_dataframe(
                 data,
                 win_transform,
@@ -217,11 +220,12 @@ def raster_to_h3(
                 nodata_value=nodata,
                 compact=compact_filtering,
             ).lazy()
+
             if compact_filtering:
                 df = (
                     df.filter(pl.col("value") > 0)
                     .with_columns(
-                        pl.col("cell").map_elements(
+                        pl.col(DEFAULT_CELL_COLUMN_NAME).map_elements(
                             lambda x: uncompact([x], h3_res),
                             return_dtype=pl.List(pl.UInt64),
                         )
@@ -229,42 +233,21 @@ def raster_to_h3(
                     .explode("cell")
                 )
 
-            df = (
-                (
-                    df.rename({"value": var_name})
-                    .with_columns(
-                        pl.col(DEFAULT_CELL_COLUMN_NAME)
-                        .h3.change_resolution(base_tile_level)
-                        .alias("tile_id")
-                    )
-                    .unique(subset=[DEFAULT_CELL_COLUMN_NAME])
-                )
-                .cast(make_polars_schema(meta["datasets"]))
-                .collect()
-            )
+            df = df.rename({"value": var_name})
+            df = df.cast(make_polars_schema(meta["datasets"])).collect()
 
             max_value = max(max_value, df.select(var_name).max().item())
             min_value = min(min_value, df.select(var_name).min().item())
             n_cells += len(df)
 
-            partition_dfs = df.partition_by(["tile_id"], as_dict=True, include_key=False)
+            partition_dfs = partition_dataframe_by_tile(df, base_tile_level)
 
-            write_tiles_task = progress.add_task("[cyan]Writing tiles...")
-
-            for tile_group, tile_df in progress.track(
-                partition_dfs.items(), task_id=write_tiles_task
-            ):
-                tile_id = tile_group[0]
-                filename = base_level_path / (hex(tile_id)[2:] + ".arrow")
-                progress.update(write_tiles_task)
-                if tile_id in seen_tiles:
-                    pl.concat([pl.read_ipc(filename), tile_df]).unique(
-                        subset=[DEFAULT_CELL_COLUMN_NAME]
-                    ).write_ipc(filename)
-                else:
-                    tile_df.write_ipc(filename)
-                seen_tiles.add(tile_id)
-            progress.update(write_tiles_task, visible=False)
+            write_tiles(
+                partition_dfs,
+                progress,
+                seen_tiles,
+                base_level_path,
+            )
             progress.update(read_chunk_task, advance=1)
 
     meta["datasets"][0].update(
@@ -281,7 +264,7 @@ def raster_to_h3(
     return base_level_path, base_tile_level
 
 
-@click.command(name="tile")
+@click.command(name="raster")
 @click.argument("input_file", type=click.Path(exists=True, path_type=Path))
 @click.argument("output_path", type=click.Path(path_type=Path))
 @click.option("--var-name", required=True, help="Column name in the arrow ipc")
@@ -302,6 +285,7 @@ def raster_to_h3(
 @click.option(
     "--compact", is_flag=True, help="Use compact to reduce memory footprint at cost of speed."
 )
+@click.option("--use-hex", is_flag=True, help="Use hexadecimal h3 index representation")
 def main(
     input_file: Path,
     output_path: Path,
@@ -311,6 +295,7 @@ def main(
     splits: int,
     h3_res: int | None,
     compact: bool,
+    use_hex: bool,
 ) -> None:
     """Convert a raster dataset to a h3 tiled dataset."""
     progress = Progress(SpinnerColumn(), *Progress.get_default_columns(), transient=True)
@@ -358,7 +343,7 @@ def main(
             next_tile_level -= 1
             current_tile_path = overview_path
 
-        meta["datasets"][0].update({"aggregate_method": agg_func})
+        meta["datasets"][0].update({"aggregation_method": agg_func})
 
         with open(output_path / "meta.json", "w") as meta_file:
             meta_file.write(MultiDatasetMeta(**meta).model_dump_json(indent=2))  # type: ignore
