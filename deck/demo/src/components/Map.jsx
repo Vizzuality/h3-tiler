@@ -32,7 +32,9 @@ export function H3Map({ selectedLayer }) {
   let layers = [
     new H3TileLayer({
       id: "tile-h3s",
-      data: "https://dev.api.amazonia360.dev-vizzuality.com/grid/tile/{h3index}",
+      // data: "https://dev.api.amazonia360.dev-vizzuality.com/grid/tile/{h3index}",
+      data: "http://127.0.0.1:8000/grid/tile/{h3index}",
+
       getTileData: (tile) => {
         return load(tile.url, ArrowLoader, {
           arrow: { shape: "object-row-table" },

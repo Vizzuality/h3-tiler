@@ -80,7 +80,7 @@ def aggregate_cells(
         agg_expression = agg_expression.mode().first()
     elif agg_func == "relative_area":
         agg_expression = (
-            (pl.col(h3index_col_name).h3.cells_area_km2() * pl.col(var_column_name)).sum()
+            (pl.col(h3index_col_name).h3.cells_area_km2() * pl.col(var_column_name)).sum()  # type: ignore[attr-defined]
             / pl.col("area_parent").first()
         ).cast(pl.Float64)
     else:
@@ -88,7 +88,7 @@ def aggregate_cells(
 
     overview = (
         df.with_columns(
-            pl.col(h3index_col_name).h3.change_resolution(h3res).alias("h3index_parent")
+            pl.col(h3index_col_name).h3.change_resolution(h3res).alias("h3index_parent")  # type: ignore[attr-defined]
         )
         .group_by("h3index_parent")
         .agg(agg_expression.alias(var_column_name))
@@ -115,12 +115,12 @@ def make_overviews(
     max_value = 0
     n_cells = 0
 
-    tiles = list(base_level_path.glob("*.arrow"))
+    tiles = list(base_level_path.glob("*.parquet"))
 
     iter_tiles_task = progress.add_task(f"[cyan]Processing tiles for level {overview_level}")
     for tile in progress.track(tiles, task_id=iter_tiles_task):
         progress.update(iter_tiles_task)
-        df = pl.scan_ipc(tile, memory_map=True)
+        df = pl.scan_parquet(tile)
         df = aggregate_cells(
             df,
             overview_resolution,
@@ -128,7 +128,7 @@ def make_overviews(
             var_name,
             h3index_col_name=DEFAULT_CELL_COLUMN_NAME,
         ).with_columns(
-            pl.col(DEFAULT_CELL_COLUMN_NAME).h3.change_resolution(overview_level).alias("tile_id")
+            pl.col(DEFAULT_CELL_COLUMN_NAME).h3.change_resolution(overview_level).alias("tile_id")  # type: ignore[attr-defined]
         )
 
         max_value = max(max_value, df.select(var_name).max().collect().item())
@@ -139,16 +139,16 @@ def make_overviews(
             if tile_df.shape[0] == 0:  # todo: skip empty tiles ?
                 continue
             tile_id = tile_group[0]
-            filename = output_path / (hex(tile_id)[2:] + ".arrow")
+            filename = output_path / (hex(tile_id)[2:] + ".parquet")
             if tile_id in seen_tiles:
                 tile_df = pl.concat(
-                    [pl.read_ipc(filename), tile_df], how="vertical_relaxed"
+                    [pl.read_parquet(filename), tile_df], how="vertical_relaxed"
                 ).unique(subset=["cell"])
-                tile_df.write_ipc(filename)
+                tile_df.write_parquet(filename)
                 n_cells += len(tile_df)
             else:
                 seen_tiles.add(tile_id)
-                tile_df.write_ipc(filename)
+                tile_df.write_parquet(filename)
                 n_cells += len(tile_df)
 
     meta["datasets"][0]["legend"]["stats"].append(
@@ -270,7 +270,7 @@ def raster_to_h3(
 @click.option("--var-name", required=True, help="Column name in the arrow ipc")
 @click.option("--nodata", help="Use this nodata instead of internal value")
 @click.option(
-    "--agg-func",
+    "--agg",
     type=click.Choice([func.name for func in AvailableAggFunctions], case_sensitive=False),
     default=AvailableAggFunctions.mean.name,
     help="Overview aggregation function.",
@@ -291,7 +291,7 @@ def main(
     output_path: Path,
     var_name: str,
     nodata: int,
-    agg_func: str,
+    agg: str,
     splits: int,
     h3_res: int | None,
     compact: bool,
@@ -334,7 +334,7 @@ def main(
                 current_tile_path,
                 overview_path,
                 next_tile_level,
-                agg_func,
+                agg,
                 var_name,
                 progress,
                 meta,
@@ -343,7 +343,7 @@ def main(
             next_tile_level -= 1
             current_tile_path = overview_path
 
-        meta["datasets"][0].update({"aggregation_method": agg_func})
+        meta["datasets"][0].update({"aggregation_method": agg})
 
         with open(output_path / "meta.json", "w") as meta_file:
             meta_file.write(MultiDatasetMeta(**meta).model_dump_json(indent=2))  # type: ignore

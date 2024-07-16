@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Any, overload
+from typing import Any, TypeVar
 
 import pandas as pd
 import polars as pl
@@ -36,22 +36,26 @@ def make_polars_schema(meta: dict) -> dict[str, PolarsDataType]:
     return {d["var_name"]: numpy_to_polars_dtype[d["var_dtype"]] for d in meta}
 
 
-@overload
-def partition_dataframe_by_tile(df: pl.DataFrame, tile_level: int) -> dict[Any, pl.DataFrame]:
-    ...
+#
+# @overload
+# def partition_dataframe_by_tile(df: pd.DataFrame, tile_level: int) -> dict[Any, pd.DataFrame]:
+#     ...
+#
+#
+# @overload
+# def partition_dataframe_by_tile(df: pl.DataFrame, tile_level: int) -> dict[Any, pl.DataFrame]:
+#     ...
+
+DF = TypeVar("DF", pl.DataFrame, pd.DataFrame)
 
 
-@overload
-def partition_dataframe_by_tile(df: pd.DataFrame, tile_level: int) -> dict[Any, pd.DataFrame]:  # type: ignore
-    ...
-
-
-def partition_dataframe_by_tile(df, tile_level: int):
+def partition_dataframe_by_tile(df: DF, tile_level: int) -> dict[Any, DF]:
     """Partition dataframe by tile. Returns groups belonging to a
     tile of the given level"""
     if isinstance(df, pl.DataFrame):
         df = df.with_columns(
             pl.col(DEFAULT_CELL_COLUMN_NAME).h3.change_resolution(tile_level).alias("tile_id")
+            # type: ignore[attr-defined]
         ).unique(subset=[DEFAULT_CELL_COLUMN_NAME])
         partitions = df.partition_by(["tile_id"], as_dict=True, include_key=False)
 
@@ -59,7 +63,7 @@ def partition_dataframe_by_tile(df, tile_level: int):
         df["tile_id"] = change_resolution(df[DEFAULT_CELL_COLUMN_NAME], tile_level).drop_duplicates(
             subset=DEFAULT_CELL_COLUMN_NAME
         )
-        partitions = dict(df.groupby("tile_id"))
+        partitions = dict(iter(df.groupby("tile_id")))  # type: ignore[arg-type]
 
     else:
         raise ValueError(f"dataframe type {type(df)} not supported")
@@ -78,13 +82,13 @@ def write_tiles(
 
     for tile_group, tile_df in progress.track(partition_dfs.items(), task_id=write_tiles_task):
         tile_id = tile_group[0]
-        filename = base_level_path / (hex(tile_id)[2:] + ".arrow")
+        filename = base_level_path / (hex(tile_id)[2:] + ".parquet")
         progress.update(write_tiles_task)
         if tile_id in seen_tiles:
-            pl.concat([pl.read_ipc(filename), tile_df]).unique(
+            pl.concat([pl.read_parquet(filename), tile_df]).unique(
                 subset=[DEFAULT_CELL_COLUMN_NAME]
-            ).write_ipc(filename)
+            ).write_parquet(filename)
         else:
-            tile_df.write_ipc(filename)
+            tile_df.write_parquet(filename)
         seen_tiles.add(tile_id)
     progress.update(write_tiles_task, visible=False)

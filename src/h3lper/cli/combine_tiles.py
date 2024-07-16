@@ -16,6 +16,7 @@ Tiles must have unique column names and be folders with the format:
 from pathlib import Path
 
 import click
+import numpy as np
 import polars as pl
 from rich.progress import Progress, SpinnerColumn
 
@@ -66,7 +67,8 @@ def merge_metadata(metas: list[MultiDatasetMeta]) -> MultiDatasetMeta:
 @click.command(name="combine")
 @click.argument("datasets", type=click.Path(exists=True, path_type=Path), nargs=-1)
 @click.argument("out_path", type=click.Path(path_type=Path))
-def main(datasets: list[Path], out_path: Path) -> None:
+@click.option("--random-columns", type=int, help="Append n random variables for testing purposes")
+def main(datasets: list[Path], out_path: Path, random_columns: int) -> None:
     """Combine different tile sources to a single one.
 
     The maximum level of tiling of the resulting dataset will be set
@@ -112,6 +114,7 @@ def main(datasets: list[Path], out_path: Path) -> None:
                 tiles.update([f.name for f in (dataset / str(level)).glob("*.arrow")])
 
             for tile_name in progress.track(tiles, description=f"Combining level {level}"):
+                # first dataframe is empty just to set the typing for the concat
                 dfs = [pl.DataFrame(schema=make_polars_schema(meta.model_dump()["datasets"]))]
                 for dataset in datasets:
                     tile_file = dataset / str(level) / tile_name
@@ -122,24 +125,29 @@ def main(datasets: list[Path], out_path: Path) -> None:
                 # oneliner to stack repeated cell indices in the way:
                 # ┌──────┬──────┬──────┐
                 # │ cell ┆ b    ┆ c    │
-                # │ ---  ┆ ---  ┆ ---  │     ┌──────┬──────┬─────┐
-                # │ u64  ┆ f32  ┆ str  │     │ cell ┆ b    ┆ c   │
-                # ╞══════╪══════╪══════╡     │ ---  ┆ ---  ┆ --- │
-                # │ 1    ┆ 9.0  ┆ null │     │ u64  ┆ f32  ┆ str │
-                # │ 2    ┆ 9.0  ┆ null │     ╞══════╪══════╪═════╡
-                # │ 3    ┆ 9.0  ┆ null │     │ 1    ┆ 9.0  ┆ a   │
-                # │ 1    ┆ null ┆ a    │ ==> │ 2    ┆ 9.0  ┆ b   │
-                # │ 2    ┆ null ┆ b    │     │ 3    ┆ 9.0  ┆ c   │
-                # │ 3    ┆ null ┆ c    │     │ 4    ┆ null ┆ a   │
-                # │ 4    ┆ null ┆ a    │     │ 5    ┆ null ┆ b   │
-                # │ 5    ┆ null ┆ b    │     │ 6    ┆ null ┆ c   │
-                # │ 6    ┆ null ┆ c    │     └──────┴──────┴─────┘
+                # │ ---  ┆ ---  ┆ ---  │         ┌──────┬──────┬─────┐
+                # │ u64  ┆ f32  ┆ str  │         │ cell ┆ b    ┆ c   │
+                # ╞══════╪══════╪══════╡         │ ---  ┆ ---  ┆ --- │
+                # │ 1    ┆ 9.0  ┆ null │         │ u64  ┆ f32  ┆ str │
+                # │ 2    ┆ 9.0  ┆ null │         ╞══════╪══════╪═════╡
+                # │ 3    ┆ 9.0  ┆ null │         │ 1    ┆ 9.0  ┆ a   │
+                # │ 1    ┆ null ┆ a    │   ==>   │ 2    ┆ 9.0  ┆ b   │
+                # │ 2    ┆ null ┆ b    │         │ 3    ┆ 9.0  ┆ c   │
+                # │ 3    ┆ null ┆ c    │         │ 4    ┆ null ┆ a   │
+                # │ 4    ┆ null ┆ a    │         │ 5    ┆ null ┆ b   │
+                # │ 5    ┆ null ┆ b    │         │ 6    ┆ null ┆ c   │
+                # │ 6    ┆ null ┆ c    │         └──────┴──────┴─────┘
                 # └──────┴──────┴──────┘
                 # There must be a more idiomatic way to do this. We can safely use max because there
                 # must be only one none null value in each group
                 tile_df = tile_df.group_by("cell", maintain_order=True).agg(pl.all().max())
                 out_dataset_path = out_path / str(level)
                 out_dataset_path.mkdir(parents=True, exist_ok=True)
+                if random_columns:
+                    for i in range(random_columns):
+                        tile_df = tile_df.with_columns(
+                            pl.lit(np.random.rand(tile_df.height)).alias(f"random_{i}")
+                        )
                 tile_df.write_ipc(out_dataset_path / tile_name)
 
             # progress.console.print(f"+ Done level {level}")
