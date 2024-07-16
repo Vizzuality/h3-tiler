@@ -36,16 +36,6 @@ def make_polars_schema(meta: dict) -> dict[str, PolarsDataType]:
     return {d["var_name"]: numpy_to_polars_dtype[d["var_dtype"]] for d in meta}
 
 
-#
-# @overload
-# def partition_dataframe_by_tile(df: pd.DataFrame, tile_level: int) -> dict[Any, pd.DataFrame]:
-#     ...
-#
-#
-# @overload
-# def partition_dataframe_by_tile(df: pl.DataFrame, tile_level: int) -> dict[Any, pl.DataFrame]:
-#     ...
-
 DF = TypeVar("DF", pl.DataFrame, pd.DataFrame)
 
 
