@@ -107,7 +107,10 @@ def make_overviews(
     progress: Progress,
     meta: dict,
 ) -> None:
-    """Compute higher resolution tiles with agg function `agg_func`."""
+    """Compute lower resolution tiles with agg function `agg_func`.
+    Note that the aggregation is perfomed with h3 hierarchi so it is not exact.
+    See https://observablehq.com/@nrabinowitz/h3-hierarchical-non-containment
+    """
 
     overview_resolution = overview_level + RESOLUTION_TO_LEVEL_DIFF
     seen_tiles = set()
